@@ -97,9 +97,9 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ---
 
-### Phase 3: Catalog API Completion ⚠️ PARTIALLY COMPLETE
+### Phase 3: Catalog API Completion ✅ COMPLETED
 
-**Status**: ⚠️ Partially Complete (Core endpoints done, missing some features)
+**Status**: ✅ Complete
 
 **Deliverables**:
 
@@ -108,21 +108,25 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 - [x] `GET /api/v1/cities` - List cities
 - [x] `GET /api/v1/cities/:id` - City details
 - [x] User saved venues endpoints
-- [ ] Photo URL generation/proxy
-- [ ] Open hours parsing and filtering
-- [ ] Advanced ranking (distance, openNow, ratingCount)
-- [ ] Caching layer
-- [ ] Rate limiting
+- [x] Photo URL generation/proxy
+- [x] Open hours parsing and filtering
+- [x] Advanced ranking (distance, openNow, ratingCount)
+- [ ] Caching layer (optional, can be added later with Redis)
+- [x] Rate limiting
 
 **Epic**: A4 (from Backlog-M1-M2-RU.md)
 
-**Remaining Work**:
+**Files Created**:
 
-- [ ] Implement `openNow` filter logic
-- [ ] Photo reference to URL conversion
-- [ ] Enhanced ranking algorithm
-- [ ] Response caching
-- [ ] API rate limiting
+- `apps/api/src/catalog/services/photo.service.ts` - Photo reference to URL conversion
+- `apps/api/src/catalog/services/hours.service.ts` - Opening hours parsing and filtering
+- `apps/api/src/common/guards/throttle.guard.ts` - Rate limiting guard
+
+**Files Modified**:
+
+- `apps/api/src/catalog/services/venues.service.ts` - Added photo URL conversion and openNow filtering
+- `apps/api/src/catalog/dto/venue-response.dto.ts` - Added photoUrls field
+- `apps/api/src/app.module.ts` - Added ThrottlerModule for rate limiting
 
 ---
 
@@ -289,11 +293,11 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ## Current Progress Summary
 
-**Completed**: 4 phases (Phase 0, Phase 1, Phase 2, Phase 4)
+**Completed**: 5 phases (Phase 0, Phase 1, Phase 2, Phase 3, Phase 4)
 **In Progress**: 0 phases
-**Not Started**: 6 phases (Phase 3, 5, 6, 7, 8, 9, 10)
+**Not Started**: 5 phases (Phase 5, 6, 7, 8, 9, 10)
 
-**Overall Progress**: ~40% complete
+**Overall Progress**: ~50% complete
 
 ## Next Steps
 

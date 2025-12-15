@@ -8,6 +8,8 @@ import { UserSavedVenueRepository } from './repositories/user-saved-venue.reposi
 import { CitiesService } from './services/cities.service';
 import { VenuesService } from './services/venues.service';
 import { UserSavedVenuesService } from './services/user-saved-venues.service';
+import { PhotoService } from './services/photo.service';
+import { HoursService } from './services/hours.service';
 import { CitiesController } from './controllers/cities.controller';
 import { VenuesController } from './controllers/venues.controller';
 import { UserSavedVenuesController } from './controllers/user-saved-venues.controller';
@@ -32,6 +34,8 @@ import { UserSavedVenuesController } from './controllers/user-saved-venues.contr
     CitiesService,
     VenuesService,
     UserSavedVenuesService,
+    PhotoService,
+    HoursService,
   ],
   exports: [
     CityRepository,

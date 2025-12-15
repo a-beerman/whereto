@@ -110,10 +110,9 @@ export class VenueRepository {
     }
 
     // Open now filter (if hours available)
-    if (filters.openNow) {
-      // This would require parsing hours JSONB - implement based on hours structure
-      // For now, skip this filter
-    }
+    // Note: This is a simplified check - full implementation would require
+    // parsing hours JSONB in SQL or filtering in application layer
+    // For MVP, we'll filter in the service layer after fetching
 
     // Sorting
     if (filters.sort === 'distance' && filters.lat && filters.lng) {

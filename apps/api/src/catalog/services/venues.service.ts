@@ -1,27 +1,43 @@
 import { Injectable } from '@nestjs/common';
 import { VenueRepository, VenueFilters } from '../repositories/venue.repository';
 import { VenueResponseDto } from '../dto/venue-response.dto';
+import { PhotoService } from './photo.service';
+import { HoursService } from './hours.service';
 
 @Injectable()
 export class VenuesService {
-  constructor(private readonly venueRepository: VenueRepository) {}
+  constructor(
+    private readonly venueRepository: VenueRepository,
+    private readonly photoService: PhotoService,
+    private readonly hoursService: HoursService,
+  ) {}
 
   async search(filters: VenueFilters): Promise<{
     venues: VenueResponseDto[];
     total: number;
     nextCursor?: string;
   }> {
-    const result = await this.venueRepository.search(filters);
+    // Remove openNow from repository search (will filter in service layer)
+    const { openNow, ...repoFilters } = filters;
+    const result = await this.venueRepository.search(repoFilters);
 
     // Apply overrides to each venue
-    const venuesWithOverrides = result.venues.map((venue) => {
+    let venuesWithOverrides = result.venues.map((venue) => {
       const overrides = venue.overrides?.[0]; // Get first override if exists
       return this.venueRepository.applyOverrides(venue, overrides);
     });
 
+    // Filter by openNow if requested
+    if (openNow) {
+      const now = new Date();
+      venuesWithOverrides = venuesWithOverrides.filter((venue) => {
+        return this.hoursService.isOpenAt(venue.hours, now);
+      });
+    }
+
     return {
       venues: venuesWithOverrides.map(this.toResponseDto),
-      total: result.total,
+      total: venuesWithOverrides.length, // Update total after filtering
       nextCursor: result.nextCursor,
     };
   }
@@ -52,6 +68,12 @@ export class VenuesService {
       }
     }
 
+    // Convert photo references to URLs
+    const photoUrls = venue.photoRefs ? this.photoService.getPhotoUrls(venue.photoRefs) : [];
+
+    // Format hours for display
+    const formattedHours = venue.hours ? this.hoursService.formatHours(venue.hours) : undefined;
+
     return {
       id: venue.id,
       cityId: venue.cityId,
@@ -62,8 +84,9 @@ export class VenuesService {
       categories: venue.categories,
       rating: venue.rating ? Number(venue.rating) : undefined,
       ratingCount: venue.ratingCount,
-      photoRefs: venue.photoRefs,
-      hours: venue.hours,
+      photoRefs: photoUrls.length > 0 ? photoUrls : venue.photoRefs, // Return URLs if available, fallback to refs
+      photoUrls, // Also include separate photoUrls field
+      hours: formattedHours || venue.hours, // Return formatted hours if available
       status: venue.status,
       createdAt: venue.createdAt,
       updatedAt: venue.updatedAt,

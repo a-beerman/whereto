@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
 import databaseConfig from './config/database.config';
 import { CatalogModule } from './catalog/catalog.module';
 import { PlansModule } from './plans/plans.module';
@@ -20,6 +22,12 @@ import { HealthController } from './common/controllers/health.controller';
       useFactory: (configService: ConfigService) => configService.get('database'),
       inject: [ConfigService],
     }),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000, // 1 minute
+        limit: 100, // 100 requests per minute
+      },
+    ]),
     TerminusModule,
     CatalogModule,
     PlansModule,
@@ -27,6 +35,11 @@ import { HealthController } from './common/controllers/health.controller';
     // MerchantModule will be added in Phase 7
   ],
   controllers: [HealthController],
-  providers: [],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}
