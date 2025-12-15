@@ -1,0 +1,156 @@
+import { Context } from 'telegraf';
+import { ApiClientService } from '../services/api-client.service';
+import { StateService } from '../services/state.service';
+import { getVenueListKeyboard, getBackKeyboard } from '../utils/keyboards';
+import { formatVenueList } from '../utils/formatters';
+
+export class SearchHandler {
+  constructor(
+    private readonly apiClient: ApiClientService,
+    private readonly stateService: StateService,
+  ) {}
+
+  async handleSearchPrompt(ctx: Context) {
+    try {
+      const userId = ctx.from?.id.toString() || '';
+      // Set searchQuery to empty string to indicate we're waiting for input
+      this.stateService.updateUserState(userId, { searchQuery: '' });
+
+      await ctx.reply('Напиши запрос (например: «кофе», «пицца», «вино», «центр»).', {
+        reply_markup: getBackKeyboard(),
+        parse_mode: 'Markdown',
+      });
+    } catch (error) {
+      console.error('Error in search prompt:', error);
+      await ctx.reply('Произошла ошибка. Попробуйте позже.');
+    }
+  }
+
+  async handleSearchQuery(ctx: Context, query: string) {
+    try {
+      const userId = ctx.from?.id.toString() || '';
+      const state = this.stateService.getUserState(userId);
+
+      if (!state.cityId) {
+        await ctx.reply('Сначала выберите город.');
+        return;
+      }
+
+      this.stateService.setSearchQuery(userId, query);
+
+      const response = await this.apiClient.searchVenues({
+        cityId: state.cityId,
+        q: query,
+        limit: 10,
+        offset: 0,
+      });
+
+      const venues = response.data || [];
+
+      if (venues.length === 0) {
+        await ctx.reply('Ничего не нашёл по запросу. Попробуй другое слово или выбери категорию.', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '🍽️ Еда', callback_data: 'category:restaurant' }],
+              [{ text: '☕ Кофе', callback_data: 'category:cafe' }],
+              [{ text: '🍺 Бар', callback_data: 'category:bar' }],
+            ],
+          },
+        });
+        return;
+      }
+
+      // Store venues in state for pagination
+      this.stateService.updateUserState(userId, { currentPage: 0 });
+
+      const venueList = venues
+        .slice(0, 5)
+        .map((venue: any, index: number) => formatVenueList(venue, index))
+        .join('\n\n');
+
+      // Create keyboard with venue buttons
+      const venueButtons = venues.slice(0, 5).map((venue: any) => [
+        {
+          text: `${venue.name} ${venue.rating ? `⭐ ${venue.rating}` : ''}`,
+          callback_data: `venue:${venue.id}`,
+        },
+      ]);
+
+      const keyboard = {
+        inline_keyboard: [
+          ...venueButtons,
+          ...(venues.length >= 10 ? [[{ text: 'Вперёд ➡️', callback_data: 'page:1' }]] : []),
+          [{ text: '⬅️ Назад к категориям', callback_data: 'back:categories' }],
+        ],
+      };
+
+      await ctx.reply(`Нашёл варианты:\n\n${venueList}`, {
+        reply_markup: keyboard,
+        parse_mode: 'Markdown',
+      });
+    } catch (error) {
+      console.error('Error in search query:', error);
+      await ctx.reply('Произошла ошибка при поиске. Попробуйте позже.');
+    }
+  }
+
+  async handleCategory(ctx: Context, category: string) {
+    try {
+      const userId = ctx.from?.id.toString() || '';
+      const state = this.stateService.getUserState(userId);
+
+      if (!state.cityId) {
+        await ctx.reply('Сначала выберите город.');
+        return;
+      }
+
+      this.stateService.setCategory(userId, category);
+
+      const response = await this.apiClient.searchVenues({
+        cityId: state.cityId,
+        category,
+        limit: 10,
+        offset: 0,
+      });
+
+      const venues = response.data || [];
+
+      if (venues.length === 0) {
+        await ctx.reply('Не нашёл заведений в этой категории.');
+        return;
+      }
+
+      // Store venues in state for pagination
+      this.stateService.updateUserState(userId, { currentPage: 0 });
+
+      const venueList = venues
+        .slice(0, 5)
+        .map((venue: any, index: number) => formatVenueList(venue, index))
+        .join('\n\n');
+
+      // Create keyboard with venue buttons
+      const venueButtons = venues.slice(0, 5).map((venue: any) => [
+        {
+          text: `${venue.name} ${venue.rating ? `⭐ ${venue.rating}` : ''}`,
+          callback_data: `venue:${venue.id}`,
+        },
+      ]);
+
+      const keyboard = {
+        inline_keyboard: [
+          ...venueButtons,
+          ...(venues.length >= 10 ? [[{ text: 'Вперёд ➡️', callback_data: 'page:1' }]] : []),
+          [{ text: '⬅️ Назад к категориям', callback_data: 'back:categories' }],
+        ],
+      };
+
+      await ctx.reply(`Нашёл варианты:\n\n${venueList}`, {
+        reply_markup: keyboard,
+        parse_mode: 'Markdown',
+      });
+    } catch (error) {
+      console.error('Error in category search:', error);
+      await ctx.reply('Произошла ошибка. Попробуйте позже.');
+    }
+  }
+}
