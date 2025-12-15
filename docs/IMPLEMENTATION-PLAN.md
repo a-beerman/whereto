@@ -200,19 +200,21 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ---
 
-### Phase 6: Telegram Bot - Group Planning Flow ⏸️ NOT STARTED
+### Phase 6: Telegram Bot - Group Planning Flow ✅ COMPLETED
 
-**Status**: ⏸️ Not Started
+**Status**: ✅ Complete
 
 **Deliverables**:
 
-- [ ] `/plan` command handler
-- [ ] Plan creation flow
-- [ ] Preference collection
-- [ ] Shortlist display
-- [ ] Voting interface
-- [ ] Results display
-- [ ] Booking request flow
+- [x] `/plan` command handler
+- [x] Plan creation flow (date, time, area, budget, format)
+- [x] Join plan functionality
+- [x] Preference collection (basic)
+- [x] Shortlist display
+- [x] Voting interface
+- [x] Results display
+- [x] Plan closing and winner selection
+- [ ] Booking request flow (will be in Phase 7)
 
 **Epic**: C (from Backlog-M1-M2-RU.md)
 
@@ -293,11 +295,11 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ## Current Progress Summary
 
-**Completed**: 5 phases (Phase 0, Phase 1, Phase 2, Phase 3, Phase 4)
+**Completed**: 6 phases (Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6)
 **In Progress**: 0 phases
-**Not Started**: 5 phases (Phase 5, 6, 7, 8, 9, 10)
+**Not Started**: 4 phases (Phase 7, 8, 9, 10)
 
-**Overall Progress**: ~50% complete
+**Overall Progress**: ~60% complete
 
 ## Next Steps
 

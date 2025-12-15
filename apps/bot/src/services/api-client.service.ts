@@ -102,4 +102,86 @@ export class ApiClientService {
     });
     return response.data;
   }
+
+  /**
+   * Create plan
+   */
+  async createPlan(data: {
+    telegramChatId: string;
+    initiatorId: string;
+    date: string;
+    time: string;
+    area?: string;
+    cityId?: string;
+    locationLat?: number;
+    locationLng?: number;
+    budget?: string;
+    format?: string;
+  }) {
+    const response = await this.client.post('/plans', data);
+    return response.data;
+  }
+
+  /**
+   * Join plan
+   */
+  async joinPlan(
+    planId: string,
+    userId: string,
+    preferences?: any,
+    location?: { lat?: number; lng?: number },
+  ) {
+    const response = await this.client.post(`/plans/${planId}/join`, {
+      userId,
+      preferences,
+      locationLat: location?.lat?.toString(),
+      locationLng: location?.lng?.toString(),
+    });
+    return response.data;
+  }
+
+  /**
+   * Get plan shortlist
+   */
+  async getPlanOptions(planId: string) {
+    const response = await this.client.get(`/plans/${planId}/options`);
+    return response.data;
+  }
+
+  /**
+   * Start voting
+   */
+  async startVoting(planId: string) {
+    const response = await this.client.post(`/plans/${planId}/vote`);
+    return response.data;
+  }
+
+  /**
+   * Cast vote
+   */
+  async castVote(planId: string, userId: string, venueId: string) {
+    const response = await this.client.post(`/plans/${planId}/vote/cast`, {
+      userId,
+      venueId,
+    });
+    return response.data;
+  }
+
+  /**
+   * Close plan
+   */
+  async closePlan(planId: string, initiatorId: string) {
+    const response = await this.client.post(`/plans/${planId}/close`, {
+      initiatorId,
+    });
+    return response.data;
+  }
+
+  /**
+   * Get plan details
+   */
+  async getPlan(planId: string) {
+    const response = await this.client.get(`/plans/${planId}`);
+    return response.data;
+  }
 }
