@@ -1,0 +1,42 @@
+{
+  "bot": {
+    "start": {
+      "welcome": "Hello! Which city are we looking for places in?",
+      "selectCity": "Select city"
+    },
+    "venue": {
+      "card": {
+        "title": "{name}",
+        "rating": "⭐ {rating} ({count})",
+        "save": "❤️ Save",
+        "saved": "✅ Saved",
+        "route": "📍 Route",
+        "call": "📞 Call",
+        "website": "🌐 Website",
+        "share": "🔗 Share",
+        "back": "⬅️ Back to list",
+        "requestBooking": "📋 Request Booking in TG"
+      }
+    },
+    "plan": {
+      "create": {
+        "when": "When?",
+        "time": "What time?",
+        "area": "Area?",
+        "budget": "Budget?",
+        "format": "Format?",
+        "votingDuration": "How long to vote?"
+      },
+      "created": "Plan created: {date} {time}, {area}, budget {budget}, format {format}. Click Join to participate.",
+      "join": "Join",
+      "preferences": "My preferences",
+      "showOptions": "Show options",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "notFound": "Nothing found for your query. Try another word or select a category.",
+      "generic": "Something went wrong. Try again in a second.",
+      "venueNotFound": "Venue not found."
+    }
+  }
+}

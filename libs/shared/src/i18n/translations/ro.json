@@ -1,0 +1,42 @@
+{
+  "bot": {
+    "start": {
+      "welcome": "Bună! În ce oraș căutăm locuri?",
+      "selectCity": "Selectează orașul"
+    },
+    "venue": {
+      "card": {
+        "title": "{name}",
+        "rating": "⭐ {rating} ({count})",
+        "save": "❤️ Salvează",
+        "saved": "✅ Salvat",
+        "route": "📍 Rută",
+        "call": "📞 Sună",
+        "website": "🌐 Site",
+        "share": "🔗 Distribuie",
+        "back": "⬅️ Înapoi la listă",
+        "requestBooking": "📋 Solicită rezervare în TG"
+      }
+    },
+    "plan": {
+      "create": {
+        "when": "Când?",
+        "time": "La ce oră?",
+        "area": "Zona?",
+        "budget": "Buget?",
+        "format": "Format?",
+        "votingDuration": "Cât timp să votăm?"
+      },
+      "created": "Plan creat: {date} {time}, {area}, buget {budget}, format {format}. Apasă Join pentru a participa.",
+      "join": "Join",
+      "preferences": "Preferințele mele",
+      "showOptions": "Afișează opțiuni",
+      "cancel": "Anulează"
+    },
+    "errors": {
+      "notFound": "Nu s-a găsit nimic pentru interogarea ta. Încearcă alt cuvânt sau selectează o categorie.",
+      "generic": "Ceva a mers greșit. Încearcă din nou într-o secundă.",
+      "venueNotFound": "Locul nu a fost găsit."
+    }
+  }
+}

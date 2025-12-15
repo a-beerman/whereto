@@ -1,0 +1,55 @@
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  Unique,
+} from 'typeorm';
+import { Vote } from './vote.entity';
+import { Plan } from './plan.entity';
+import { Venue } from '../../catalog/entities/venue.entity';
+
+@Entity('vote_casts')
+@Unique(['voteId', 'userId'])
+@Index(['voteId'])
+@Index(['planId'])
+@Index(['userId'])
+@Index(['venueId'])
+export class VoteCast {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  voteId!: string;
+
+  @ManyToOne(() => Vote, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'voteId' })
+  vote!: Vote;
+
+  @Column({ type: 'uuid' })
+  @Index()
+  planId!: string;
+
+  @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'planId' })
+  plan!: Plan;
+
+  @Column({ type: 'varchar', length: 255 })
+  @Index()
+  userId!: string; // Telegram user ID
+
+  @Column({ type: 'uuid' })
+  @Index()
+  venueId!: string;
+
+  @ManyToOne(() => Venue)
+  @JoinColumn({ name: 'venueId' })
+  venue!: Venue;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  castAt!: Date;
+}

@@ -18,9 +18,13 @@ coverage/
 Thumbs.db
 .vscode/
 .idea/
+
 # Angular / Ionic
 .angular/
 www/
 
 # Build artifacts
 *.tsbuildinfo
+
+# Husky
+.husky/_
