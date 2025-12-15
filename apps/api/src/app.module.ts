@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { TerminusModule } from '@nestjs/terminus';
 import databaseConfig from './config/database.config';
 import { CatalogModule } from './catalog/catalog.module';
+import { PlansModule } from './plans/plans.module';
+import { IngestionModule } from './ingestion/ingestion.module';
 import { HealthController } from './common/controllers/health.controller';
 
 @Module({
@@ -20,7 +22,8 @@ import { HealthController } from './common/controllers/health.controller';
     }),
     TerminusModule,
     CatalogModule,
-    // PlansModule will be added in Phase 4
+    PlansModule,
+    IngestionModule,
     // MerchantModule will be added in Phase 7
   ],
   controllers: [HealthController],

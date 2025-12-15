@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { City, Venue, VenueSource, VenueOverrides, VenuePartner, UserSavedVenue } from './entities';
 import { CityRepository } from './repositories/city.repository';
 import { VenueRepository } from './repositories/venue.repository';
+import { VenueSourceRepository } from './repositories/venue-source.repository';
 import { UserSavedVenueRepository } from './repositories/user-saved-venue.repository';
 import { CitiesService } from './services/cities.service';
 import { VenuesService } from './services/venues.service';
@@ -26,6 +27,7 @@ import { UserSavedVenuesController } from './controllers/user-saved-venues.contr
   providers: [
     CityRepository,
     VenueRepository,
+    VenueSourceRepository,
     UserSavedVenueRepository,
     CitiesService,
     VenuesService,
@@ -34,6 +36,7 @@ import { UserSavedVenuesController } from './controllers/user-saved-venues.contr
   exports: [
     CityRepository,
     VenueRepository,
+    VenueSourceRepository,
     UserSavedVenueRepository,
     CitiesService,
     VenuesService,

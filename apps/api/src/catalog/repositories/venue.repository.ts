@@ -159,6 +159,25 @@ export class VenueRepository {
     return { venues, total, nextCursor };
   }
 
+  async create(venue: Partial<Venue>): Promise<Venue> {
+    const newVenue = this.repository.create(venue);
+    return this.repository.save(newVenue);
+  }
+
+  async update(id: string, updates: Partial<Venue>): Promise<Venue> {
+    await this.repository.update(id, updates);
+    const updated = await this.findById(id);
+    if (!updated) {
+      throw new Error(`Venue with id ${id} not found`);
+    }
+    return updated;
+  }
+
+  async upsert(venue: Partial<Venue>): Promise<Venue> {
+    // For now, simple create - can be enhanced with conflict resolution
+    return this.create(venue);
+  }
+
   /**
    * Apply overrides to venue at read time
    */
