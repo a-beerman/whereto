@@ -30,6 +30,9 @@ export class Plan {
   @Index()
   initiatorId!: string; // Telegram user ID
 
+  @Column({ type: 'uuid', nullable: true })
+  cityId?: string; // City ID for venue search
+
   @Column({ type: 'date' })
   @Index()
   date!: Date;
