@@ -1,10 +1,114 @@
-# Cursor IDE  how to start
+# Cursor IDE — Руководство по началу работы
 
-1) Open repository root in Cursor
-2) Install Node LTS
-3) Create env:
+## Быстрый старт
+
+1. Откройте корень репозитория в Cursor IDE
+2. Установите Node.js LTS
+3. Создайте файлы окружения:
 ```bash
 cp .env.example .env
 ```
 
-This repo currently contains docs & config only. Next step is to generate NX apps/libraries.
+## Конфигурация Cursor IDE
+
+### Файл `.cursorrules`
+
+В корне проекта находится файл `.cursorrules`, который автоматически предоставляет контекст AI-ассистенту о:
+- Архитектуре проекта (offline-first, city-based ingestion)
+- Доменной модели (City, Venue, VenueSource, VenueOverrides)
+- Стиле кода и соглашениях
+- Ключевых паттернах и анти-паттернах
+
+**Важно**: Этот файл читается автоматически при работе с проектом в Cursor IDE.
+
+### Использование AI-ассистента
+
+#### Основные команды
+
+- `Cmd/Ctrl + K` — инлайн-редактирование кода
+- `Cmd/Ctrl + L` — чат с AI-ассистентом
+- `@docs` — ссылка на документацию
+- `@libs/shared` — ссылка на общие библиотеки
+
+#### Рекомендации по работе
+
+1. **При добавлении новых фич**:
+   - Ссылайтесь на доменную модель в `docs/CATALOG-RU.md`
+   - Проверяйте `docs/ARCHITECTURE.md` для понимания компонентов
+   - Следуйте паттернам NX monorepo
+
+2. **При работе с каталогом/ingestion**:
+   - Помните: ingestion jobs только, никогда в API handlers
+   - Применяйте правила дедупликации
+   - Всегда применяйте overrides при чтении данных venue
+
+3. **При работе с API**:
+   - Все чтения только из Catalog DB
+   - Используйте PostGIS для geo-запросов
+   - Применяйте venue overrides при чтении
+
+#### Примеры запросов к AI
+
+**Хорошо**:
+- "Создай Venue entity с полями из docs/CATALOG-RU.md, помни про offline-first"
+- "Добавь endpoint GET /venues для поиска, используй только Catalog DB"
+- "Реализуй ingestion job для синка города, следуя паттерну из docs"
+
+**Плохо**:
+- "Создай API для получения мест" (не указан источник данных)
+- "Добавь поиск через Google Places" (нарушает offline-first)
+
+## Ключевые принципы для AI
+
+При генерации кода AI должен помнить:
+
+1. **Offline-first**: Все пользовательские чтения из нашей БД
+2. **B2C-first**: Фокус на конечных пользователях в Phase 1
+3. **City-based**: Ingestion запускается на город
+4. **Overrides**: Ручные правки переживают синки
+
+## Структура проекта
+
+```
+whereto/
+├── .cursorrules          # Конфигурация для Cursor IDE
+├── .cursor/              # Дополнительные файлы Cursor
+│   └── README.md         # Подробное руководство (EN)
+├── apps/                 # NX приложения (будут созданы)
+│   ├── api/              # Backend API
+│   ├── bot/              # Telegram bot
+│   └── miniapp/          # Telegram Mini App
+├── libs/                 # Общие библиотеки
+│   └── shared/           # Shared code
+└── docs/                 # Документация
+```
+
+## Дополнительные ресурсы
+
+- Подробное руководство (EN): `.cursor/README.md`
+- Архитектура: `docs/ARCHITECTURE.md`
+- Модель каталога: `docs/CATALOG-RU.md`
+- PRD: `docs/PRD-RU.md`
+- Бэклог: `docs/Backlog-M1-M2-RU.md`
+
+## Текущий статус
+
+Репозиторий сейчас содержит только документацию и конфигурацию. Следующий шаг — генерация NX apps/libraries.
+
+## Troubleshooting
+
+### AI не понимает архитектуру
+
+- Проверьте наличие файла `.cursorrules` в корне проекта
+- Ссылайтесь на конкретные документы: `@docs/ARCHITECTURE.md`
+- Явно упоминайте ключевые принципы в запросе
+
+### Сгенерированный код нарушает offline-first
+
+- Напомните AI: "Помни, это read handler — используй только Catalog DB"
+- Ссылайтесь на секцию `.cursorrules` "When Writing Code"
+
+### Не хватает контекста домена
+
+- Ссылайтесь на `@docs/CATALOG-RU.md` для доменной модели
+- Упоминайте конкретные сущности: "Создай Venue entity с полями..."

@@ -1,0 +1,222 @@
+# WhereTo Project Rules for Cursor IDE
+
+## Project Overview
+
+**WhereTo** is a B2C-first city guide service that helps users discover places (venues) in their city. The MVP focuses on Telegram bot + API with an offline catalog architecture.
+
+### Core Principles
+
+1. **B2C-first**: End users are the primary focus in Phase 1. B2B features (merchant cabinet, analytics) are Phase 2.
+2. **Offline catalog**: All user-facing reads come from our own database, not from external APIs at request time.
+3. **City-based ingestion**: Venues are synced city-by-city from Google Places into our DB via batch jobs.
+4. **Override system**: Manual corrections/curation survive subsequent syncs via `VenueOverrides`.
+
+## Architecture
+
+### Components
+
+1. **API (Backend/BFF)**: Read-only operations from our DB (search, venue details, saved items). Write operations for Telegram domain (plans, votes).
+2. **Ingestion Worker**: Batch job that syncs venues from Google Places per city, normalizes data, handles deduplication.
+3. **Bot (Telegram)**: Primary UX for Phase 1 - city selection, search, venue cards, save/share.
+4. **Mini App**: Optional web UI for Phase 1 (`/c/*` consumer zone). Merchant zone (`/m/*`) is Phase 2.
+
+### Data Flow
+
+- **Catalog sync**: Ingestion job → Google Places → normalize → upsert to DB → apply dedup → apply overrides
+- **User requests**: Bot/Miniapp → API → Catalog DB → return results
+
+**Critical**: External APIs (Google Places) are ONLY used by ingestion workers, never in user request paths.
+
+## Domain Model
+
+Reference: `docs/CATALOG-RU.md` for detailed schema.
+
+### Core Entities
+
+- **City**: City/location catalog (id, name, country_code, center_lat/lng, bounds, timezone, is_active)
+- **Venue**: Canonical venue record (id, city_id, name, address, lat/lng, categories, rating, rating_count, photo_refs, hours, status: active/hidden/duplicate)
+- **VenueSource**: Links Venue to external source (venue_id, source: 'google_places', external_id: place_id, last_synced_at, raw_hash)
+- **VenueOverrides**: Manual edits that survive syncs (venue_id, name_override, address_override, pin_override, category_overrides, hidden, note, updated_by/at)
+
+### Key Patterns
+
+- **Deduplication**: Source ID match → Geo+name similarity → Address match (priority order)
+- **Status management**: `active`, `hidden`, `duplicate` flags
+- **Override application**: Overrides applied at read time (or materialized projection)
+
+## Tech Stack
+
+- **Monorepo**: NX workspace
+- **Backend**: NestJS (TypeScript) - see `docs/TECH-STACK.md` for patterns
+- **Frontend**: Angular + Ionic Framework (TypeScript) - see `docs/TECH-STACK.md`
+- **Bot**: Telegram Bot (TypeScript, Telegraf) - see `docs/TECH-STACK.md`
+- **Database**: PostgreSQL + PostGIS for geo queries - see `docs/DATABASE.md`
+- **Structure**: `apps/` (api, bot, miniapp), `libs/` (shared libraries)
+- **Shared constants**: `libs/shared/src/constants/mvp-settings.ts`
+
+## Code Style & Conventions
+
+See `docs/CODE-STYLE.md` for comprehensive guidelines.
+
+### TypeScript
+
+- Use strict TypeScript configuration
+- Prefer explicit types over `any`
+- Use `const` assertions for configuration objects (see `mvp-settings.ts`)
+- Follow NX monorepo patterns for library/app organization
+
+### Naming
+
+- Entities: PascalCase (City, Venue, VenueSource)
+- Functions/variables: camelCase
+- Constants: UPPER_SNAKE_CASE or const objects
+- Files: kebab-case for utilities, match entity names for models
+
+### File Organization
+
+- Domain models in `libs/shared/src/` or app-specific domains
+- Constants in `libs/shared/src/constants/`
+- Follow NX conventions for app/library boundaries
+
+### Framework-Specific Patterns
+
+- **NestJS**: See `docs/TECH-STACK.md` for module organization, services, DTOs, repositories
+- **Angular/Ionic**: See `docs/TECH-STACK.md` for component structure, services, state management
+- **Telegram Bot**: See `docs/TECH-STACK.md` for handler patterns, state management
+
+## Key Implementation Patterns
+
+### Ingestion Jobs
+
+- Run per `City` (granularity)
+- Fetch by categories/geo bounds
+- Normalize → upsert with dedup
+- Track metrics (duration, records processed, duplicates, errors)
+- Support scheduled cadence + manual re-sync
+
+### API Endpoints
+
+- `GET /venues` - search/filter (q, category, bbox/radius, minRating)
+- `GET /venues/:id` - venue details
+- All reads from Catalog DB only
+
+### Deduplication Rules
+
+1. Same `external_id` in same `source` = same venue
+2. Distance < 30-60m + similar normalized name = likely duplicate
+3. Matching normalized address + similar name = likely duplicate
+
+Action: Mark one as master, others as `duplicate/hidden`.
+
+## Out of Scope (Phase 1)
+
+- Menus / products
+- Table booking
+- Orders / payments
+- Delivery
+- Full B2B merchant cabinet
+
+## Documentation References
+
+### Primary Planning & Specification Documents
+- **FINAL-SPEC.md**: `docs/FINAL-SPEC.md` - **Primary implementation-ready specification** (English, concise) - **Start here for planning and implementation**
+- **TZ-RU.md**: `docs/TZ-RU.md` - **Comprehensive Russian technical specification** (most detailed, includes user scenarios, risks, detailed requirements)
+
+### Product & Architecture
+- Architecture: `docs/ARCHITECTURE.md`
+- Catalog model: `docs/CATALOG-RU.md`
+- PRD: `docs/PRD-RU.md`
+- Backlog: `docs/Backlog-M1-M2-RU.md`
+- Bot copy: `docs/Bot-Copy-RU.md`
+- Decisions log: `docs/DECISIONS-RU.md`
+- Estimates: `docs/ESTIMATES-RU.md`
+
+### Development Documentation
+- **Setup**: `docs/DEVELOPMENT-SETUP.md` - Local development setup, dependencies, running services
+- **Tech Stack**: `docs/TECH-STACK.md` - NestJS, Angular, Ionic, Telegram Bot patterns and examples
+- **Database**: `docs/DATABASE.md` - Schema, migrations, PostGIS usage, queries
+- **API**: `docs/API.md` - REST API endpoints, DTOs, response formats, error codes
+- **Testing**: `docs/TESTING.md` - Testing strategies, unit/integration/E2E tests, best practices
+- **Code Style**: `docs/CODE-STYLE.md` - TypeScript conventions, naming, formatting, linting
+- **Git Workflow**: `docs/GIT-WORKFLOW.md` - Branching strategy, commit messages, PR process
+- **Deployment**: `docs/DEPLOYMENT.md` - CI/CD, Docker, deployment strategies, monitoring
+- **Environment**: `docs/ENVIRONMENT.md` - Environment variables, configuration, secrets management
+
+## When Writing Code
+
+1. **Always read from our DB** for user-facing operations
+2. **Never call external APIs** (Google Places) in request handlers
+3. **Apply overrides** when reading venue data
+4. **Use geo indexes** (PostGIS) for location-based queries
+5. **Track ingestion metrics** for observability
+6. **Follow offline-first** principle - cache-friendly, predictable latency
+
+## Testing Considerations
+
+See `docs/TESTING.md` for comprehensive testing guidelines.
+
+- Mock external APIs (Google Places) in tests
+- Test deduplication logic with various scenarios
+- Verify override application doesn't break on sync
+- Test geo queries with PostGIS indexes
+- Follow Arrange-Act-Assert pattern
+- Use descriptive test names
+- Maintain 80%+ coverage for business logic
+
+## Common Pitfalls to Avoid
+
+- ❌ Calling Google Places API in API request handlers
+- ❌ Ignoring overrides when reading venues
+- ❌ Creating duplicate venues without dedup check
+- ❌ Breaking override system during sync
+- ❌ Missing geo indexes for location queries
+- ❌ Not following code style guidelines (see `docs/CODE-STYLE.md`)
+- ❌ Skipping tests for new features (see `docs/TESTING.md`)
+- ❌ Not validating environment variables (see `docs/ENVIRONMENT.md`)
+
+## Planning & Implementation
+
+### When Planning Features
+- **Start with**: `docs/FINAL-SPEC.md` for implementation-ready specification
+- **For detailed scenarios**: See `docs/TZ-RU.md` Section 6 (user roles and scenarios)
+- **For risk analysis**: See `docs/TZ-RU.md` Section 11 and `docs/FINAL-SPEC.md` Section 11
+- **For MVP Definition of Done**: See `docs/FINAL-SPEC.md` Section 9 and `docs/README.md` MVP Definition of Done Checklist
+
+### Data Sources
+- **Primary**: Google Places API (Phase 1)
+- **Optional**: Delivery site parsing, ERP integration
+- Architecture supports multiple sources via `VenueSource` abstraction
+- See `docs/FINAL-SPEC.md` Section 2, `docs/TZ-RU.md` Section 3.2, `docs/TECH-STACK.md` for integration patterns
+
+## Quick Reference for Common Tasks
+
+### Setting Up Development
+- See `docs/DEVELOPMENT-SETUP.md` for initial setup
+- See `docs/ENVIRONMENT.md` for environment configuration
+
+### Adding New Features
+- **Plan first**: Reference `docs/FINAL-SPEC.md` for scope and requirements
+- **For scenarios**: Check `docs/TZ-RU.md` Section 6 for detailed user scenarios
+- Follow patterns in `docs/TECH-STACK.md` for framework-specific code
+- Reference `docs/API.md` for API endpoint conventions
+- See `docs/DATABASE.md` for database schema and migrations
+- Write tests following `docs/TESTING.md`
+
+### Code Quality
+- Follow `docs/CODE-STYLE.md` for formatting and conventions
+- Run linting: `npm run lint`
+- Run tests: `npm test`
+
+### Git Workflow
+- Follow `docs/GIT-WORKFLOW.md` for branching and commits
+- Use conventional commit messages
+- Create PRs with proper descriptions
+
+### Deployment
+- See `docs/DEPLOYMENT.md` for CI/CD and deployment processes
+- Check `docs/ENVIRONMENT.md` for production environment variables
+
+### Risk Management
+- Review risks in `docs/TZ-RU.md` Section 11 and `docs/FINAL-SPEC.md` Section 11
+- Consider mitigation strategies when implementing features
+- Monitor metrics to detect risk conditions early
