@@ -1,0 +1,16 @@
+{
+  "name": "whereto",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:bot\" \"npm run dev:miniapp\"",
+    "dev:api": "node apps/api/src/main.ts",
+    "dev:bot": "node apps/bot/src/main.ts",
+    "dev:miniapp": "echo \"Run miniapp via nx serve once generated\"",
+    "format": "prettier -w ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "prettier": "^3.6.2"
+  }
+}
