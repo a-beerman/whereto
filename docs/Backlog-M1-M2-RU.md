@@ -1,42 +1,72 @@
-# Backlog (RU)  Month 12
+# Бэклог M1–M2 (RU)
 
-## Month 1
-### Epic A: Catalog (read) via tg-platform-api
-- A1: List restaurants (GET /restaurants) w filters
-- A2: Restaurant details (GET /restaurants/:id)
-- A3: Menu (GET /restaurants/:id/menu)
+> Цель: **B2C-first** продукт с **офлайн‑каталогом мест** (синк Google Places → наша БД по городам). Фокус: discovery/search → карточка места → сохранить/поделиться.  
+> **B2B, бронирования, меню/товары** — **Phase 2**.
 
-### Epic B: Miniapp B2C
-- B1: /c/discover list + search + filters
-- B2: /c/restaurants/:id details
-- B3: Menu read-only
+## Принципы релиза
+- **Оффлайн по умолчанию**: чтение каталога из нашей БД; в приложении/боте — кэш и быстрые ответы.
+- **Скорость и простота**: минимум экранов/состояний.
+- **Каталог как истина**: единая модель Venue + источники + overrides.
 
-### Epic C: Plan + Join + Vote
-- C1: /plan creates plan
-- C2: Join required (POST /plans/:id/join)
-- C3: Prefs
-- C4: shortlist generate
-- C5: vote create with 1/2/3/6h duration
-- C6: cast one-shot
-- C7: close manual/auto_all_voted/timeout + tie-break
-- C8: timeout_no_votes  recommendation + revote (initiator)
+---
 
-### Epic D: Roles + merchant onboarding
-- D1: GET /me
-- D2: POST /merchant/link (invite code reusable)
+## Month 1 (M1): офлайн‑каталог + B2C ядро + /plan
 
-## Month 2
-### Epic E: Booking requests
-- E1: create booking request
-- E2: merchant inbox
-- E3: confirm/reject/propose time
-- E4: notifications
+### Epic A: Catalog (offline sync + read API)
+- A1: Модель `City/Venue/VenueSource/VenueOverrides` (см. `docs/CATALOG-RU.md`).
+- A2: Ingestion job: синк 1 города (start: Кишинёв) из Google Places в БД.
+- A3: Дедуп (минимальный): по `place_id` + geo+name эвристика.
+- A4: Read API:
+  - `GET /venues` (поиск/фильтры: q, category, bbox/radius, minRating)
+  - `GET /venues/:id` (карточка)
+- A5: Фото: хранение refs + отдача URL (или прокси) + базовый кэш.
+- A6: Overrides: скрыть/поправить поля без пересинка.
 
-### Epic F: Miniapp B2B
-- F1: /m/inbox guarded
-- F2: merchant selector (multi-merchant)
-- F3: request details + actions
+### Epic B: B2C discovery (Bot-first; miniapp опционально)
+- B1: Bot: выбор города + категории + поиск.
+- B2: Bot: список результатов (пагинация) + открыть карточку.
+- B3: Bot: действия в карточке: “Сохранить”, “Поделиться”, “Маршрут/Позвонить/Сайт” (если есть).
+- B4: Saved (минимум): избранное пользователя.
 
-### Epic G: Admin (minimum)
-- G1: mark restaurant partner
-- G2: invite code view/rotate
+> Miniapp B2C (`/c/*`) — только если нужно для UX; иначе оставить на M2.
+
+### Epic C: Plan + Join + Vote (оставляем)
+- C1: `/plan` создаёт план.
+- C2: Join required (POST /plans/:id/join).
+- C3: Prefs (минимально: формат/бюджет/район/время).
+- C4: Generate shortlist из каталога (top N по скорингу).
+- C5: Vote create с 1/2/3/6h duration.
+- C6: Cast one-shot.
+- C7: Close: manual / auto_all_voted / timeout + tie-break.
+- C8: Timeout no votes: soft-reco (top-1) + revote (initiator only).
+
+### Epic D: Observability & UX quality
+- D1: Метрики: search→open card, save, share, plans created.
+- D2: p95 latency для поиска/карточки.
+
+---
+
+## Month 2 (M2): качество каталога + B2C polish
+
+### Epic E: Catalog quality
+- E1: Улучшить дедуп + инструмент “mark duplicate/hidden”.
+- E2: Scheduled refresh (cadence) + ручной resync.
+- E3: Админ-команды (минимум): hide/unhide, edit overrides, resync.
+
+### Epic F: Discovery improvements
+- F1: Ранжирование (distance/openNow/ratingCount).
+- F2: Подборки/категории (простые коллекции).
+- F3: Улучшенный поиск (синонимы/опечатки — минимально).
+
+### Epic G: Miniapp B2C (если нужно)
+- G1: `/c/discover` (категории + поиск).
+- G2: `/c/venues/:id` (карточка)
+- G3: `/c/saved`
+
+---
+
+## Phase 2: B2B + availability/booking + меню
+
+- Claim/merchant onboarding + кабинет.
+- “Уточнить наличие мест” (availability requests) для подключённых заведений.
+- Бронирование/заказы/меню — отдельные итерации.
