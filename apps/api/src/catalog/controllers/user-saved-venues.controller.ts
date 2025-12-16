@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { UserSavedVenuesService } from '../services/user-saved-venues.service';
 import { SaveVenueDto } from '../dto/save-venue.dto';
+import { MetricsService } from '../../common/services/metrics.service';
 import { IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -31,7 +32,10 @@ class PaginationDto {
 
 @Controller('me/saved')
 export class UserSavedVenuesController {
-  constructor(private readonly savedVenuesService: UserSavedVenuesService) {}
+  constructor(
+    private readonly savedVenuesService: UserSavedVenuesService,
+    private readonly metricsService: MetricsService,
+  ) {}
 
   // TODO: Extract user ID from Telegram auth token
   private getUserId(req: Request): string {
@@ -49,7 +53,17 @@ export class UserSavedVenuesController {
   @Post()
   async saveVenue(@Request() req: Request, @Body() dto: SaveVenueDto) {
     const userId = this.getUserId(req);
-    return this.savedVenuesService.saveVenue(userId, dto.venueId);
+    await this.savedVenuesService.saveVenue(userId, dto.venueId);
+
+    // Track save_place event
+    this.metricsService.trackProductEvent({
+      event: 'save_place',
+      userId,
+      venueId: dto.venueId,
+      timestamp: new Date(),
+    });
+
+    return { message: 'Venue saved successfully' };
   }
 
   @Delete(':venueId')

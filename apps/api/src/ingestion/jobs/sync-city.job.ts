@@ -115,9 +115,26 @@ export class SyncCityJob {
       metrics.endTime = new Date();
       metrics.durationMs = metrics.endTime.getTime() - metrics.startTime.getTime();
 
-      this.logger.log(
-        `Sync completed for ${city.name}: ${metrics.venuesCreated} created, ${metrics.venuesUpdated} updated, ${metrics.duplicatesFound} duplicates, ${metrics.errors} errors`,
-      );
+      // Log structured metrics for observability
+      this.logger.log({
+        message: `Sync completed for ${city.name}`,
+        cityId: metrics.cityId,
+        cityName: metrics.cityName,
+        placesFetched: metrics.placesFetched,
+        venuesCreated: metrics.venuesCreated,
+        venuesUpdated: metrics.venuesUpdated,
+        duplicatesFound: metrics.duplicatesFound,
+        errors: metrics.errors,
+        durationMs: metrics.durationMs,
+        successRate:
+          metrics.placesFetched > 0
+            ? (
+                ((metrics.venuesCreated + metrics.venuesUpdated) / metrics.placesFetched) *
+                100
+              ).toFixed(2) + '%'
+            : '0%',
+        timestamp: metrics.endTime?.toISOString(),
+      });
 
       return metrics;
     } catch (error) {

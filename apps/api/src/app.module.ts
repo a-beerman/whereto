@@ -9,6 +9,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { PlansModule } from './plans/plans.module';
 import { IngestionModule } from './ingestion/ingestion.module';
 import { MerchantModule } from './merchant/merchant.module';
+import { CommonModule } from './common/common.module';
 import { HealthController } from './common/controllers/health.controller';
 
 @Module({
@@ -30,6 +31,7 @@ import { HealthController } from './common/controllers/health.controller';
       },
     ]),
     TerminusModule,
+    CommonModule,
     CatalogModule,
     PlansModule,
     IngestionModule,

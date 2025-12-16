@@ -15,12 +15,14 @@ import { VoteDto } from '../dto/vote.dto';
 import { ClosePlanDto } from '../dto/close-plan.dto';
 import { BookingRequestService } from '../../merchant/services/booking-request.service';
 import { CreateBookingRequestDto } from '../../merchant/dto/create-booking-request.dto';
+import { MetricsService } from '../../common/services/metrics.service';
 
 @Controller('plans')
 export class PlansController {
   constructor(
     private readonly plansService: PlansService,
     private readonly bookingRequestService: BookingRequestService,
+    private readonly metricsService: MetricsService,
   ) {}
 
   // TODO: Extract user ID from Telegram auth token
@@ -41,6 +43,20 @@ export class PlansController {
       locationLng: dto.locationLng ? parseFloat(dto.locationLng) : undefined,
       budget: dto.budget,
       format: dto.format,
+    });
+
+    // Track plan_created event
+    this.metricsService.trackProductEvent({
+      event: 'plan_created',
+      userId: dto.initiatorId,
+      planId: plan.id,
+      cityId: dto.cityId,
+      timestamp: new Date(),
+      metadata: {
+        format: dto.format,
+        budget: dto.budget,
+        area: dto.area,
+      },
     });
 
     return { data: plan };

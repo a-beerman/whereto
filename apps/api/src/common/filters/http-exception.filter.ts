@@ -28,8 +28,22 @@ export class HttpExceptionFilter implements ExceptionFilter {
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
+      correlationId: (request as any).correlationId,
       message: typeof message === 'string' ? message : (message as any).message || message,
     };
+
+    // Log error with structured context (error tracking service can be injected if needed)
+    if (exception instanceof Error && status >= 500) {
+      this.logger.error({
+        message: exception.message,
+        stack: exception.stack,
+        correlationId: (request as any).correlationId,
+        userId: request.headers['x-user-id'] as string,
+        endpoint: request.url,
+        method: request.method,
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     if (status >= 500) {
       this.logger.error(

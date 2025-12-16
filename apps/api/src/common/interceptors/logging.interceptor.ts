@@ -8,7 +8,8 @@ export class LoggingInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request = context.switchToHttp().getRequest();
-    const { method, url } = request;
+    const { method, url, path, correlationId, headers } = request;
+    const userId = headers['x-user-id'] || headers['x-merchant-user-id'] || 'anonymous';
     const now = Date.now();
 
     return next.handle().pipe(
@@ -16,11 +17,36 @@ export class LoggingInterceptor implements NestInterceptor {
         next: () => {
           const response = context.switchToHttp().getResponse();
           const delay = Date.now() - now;
-          this.logger.log(`${method} ${url} ${response.statusCode} - ${delay}ms`);
+
+          // Structured logging with context
+          this.logger.log({
+            message: `${method} ${path || url} ${response.statusCode}`,
+            method,
+            path: path || url,
+            statusCode: response.statusCode,
+            duration: delay,
+            correlationId,
+            userId,
+            timestamp: new Date().toISOString(),
+          });
         },
         error: (error) => {
+          const response = context.switchToHttp().getResponse();
           const delay = Date.now() - now;
-          this.logger.error(`${method} ${url} - ${delay}ms - ${error.message}`);
+
+          // Structured error logging
+          this.logger.error({
+            message: `${method} ${path || url} - ${error.message}`,
+            method,
+            path: path || url,
+            statusCode: response.statusCode || 500,
+            duration: delay,
+            correlationId,
+            userId,
+            error: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+          });
         },
       }),
     );
