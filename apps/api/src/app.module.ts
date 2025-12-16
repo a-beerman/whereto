@@ -8,6 +8,7 @@ import databaseConfig from './config/database.config';
 import { CatalogModule } from './catalog/catalog.module';
 import { PlansModule } from './plans/plans.module';
 import { IngestionModule } from './ingestion/ingestion.module';
+import { MerchantModule } from './merchant/merchant.module';
 import { HealthController } from './common/controllers/health.controller';
 
 @Module({
@@ -32,7 +33,7 @@ import { HealthController } from './common/controllers/health.controller';
     CatalogModule,
     PlansModule,
     IngestionModule,
-    // MerchantModule will be added in Phase 7
+    MerchantModule,
   ],
   controllers: [HealthController],
   providers: [

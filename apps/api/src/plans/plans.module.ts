@@ -9,11 +9,13 @@ import { PlansService } from './services/plans.service';
 import { ShortlistService } from './services/shortlist.service';
 import { PlansController } from './controllers/plans.controller';
 import { CatalogModule } from '../catalog/catalog.module';
+import { MerchantModule } from '../merchant/merchant.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Plan, Participant, Vote, VoteCast]),
     CatalogModule, // For VenueRepository
+    MerchantModule, // For BookingRequestService
   ],
   controllers: [PlansController],
   providers: [

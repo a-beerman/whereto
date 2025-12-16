@@ -4,10 +4,15 @@ import { CreatePlanDto } from '../dto/create-plan.dto';
 import { JoinPlanDto } from '../dto/join-plan.dto';
 import { VoteDto } from '../dto/vote.dto';
 import { ClosePlanDto } from '../dto/close-plan.dto';
+import { BookingRequestService } from '../../merchant/services/booking-request.service';
+import { CreateBookingRequestDto } from '../../merchant/dto/create-booking-request.dto';
 
 @Controller('plans')
 export class PlansController {
-  constructor(private readonly plansService: PlansService) {}
+  constructor(
+    private readonly plansService: PlansService,
+    private readonly bookingRequestService: BookingRequestService,
+  ) {}
 
   // TODO: Extract user ID from Telegram auth token
   private getUserId(req: Request): string {
@@ -76,5 +81,29 @@ export class PlansController {
   async getPlanDetails(@Param('id') id: string) {
     const plan = await this.plansService.getPlanDetails(id);
     return { data: plan };
+  }
+
+  @Post(':id/booking-request')
+  async createBookingRequest(@Param('id') planId: string, @Body() dto: CreateBookingRequestDto) {
+    // Verify plan exists and is closed
+    const plan = await this.plansService.getPlanDetails(planId);
+    if (!plan) {
+      throw new NotFoundException(`Plan with id ${planId} not found`);
+    }
+
+    if (plan.status !== 'closed') {
+      throw new NotFoundException('Booking requests can only be created for closed plans');
+    }
+
+    const bookingRequest = await this.bookingRequestService.createBookingRequest({
+      planId,
+      venueId: dto.venueId,
+      requestedDate: new Date(dto.requestedDate),
+      requestedTime: dto.requestedTime,
+      participantsCount: dto.participantsCount,
+      notes: dto.notes,
+    });
+
+    return { data: bookingRequest };
   }
 }
