@@ -46,16 +46,19 @@ The API is generally language-agnostic. Most internationalization (i18n) happens
 If needed, the API can accept an optional language parameter for error messages or localized content:
 
 **Query Parameter:**
+
 ```
 GET /api/v1/venues?lang=ru
 ```
 
 **Accept-Language Header:**
+
 ```
 Accept-Language: ru-RU,ru;q=0.9,en;q=0.8
 ```
 
 **Supported Language Codes:**
+
 - `ru` - Russian (default)
 - `en` - English
 - `ro` - Romanian
@@ -70,7 +73,9 @@ For detailed i18n implementation, see [`docs/I18N.md`](I18N.md).
 
 ```json
 {
-  "data": { /* response data */ },
+  "data": {
+    /* response data */
+  },
   "meta": {
     "total": 100,
     "page": 1,
@@ -101,22 +106,22 @@ Search and filter venues.
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `q` | string | No | Search query (name, address) |
-| `cityId` | UUID | No | Filter by city |
-| `category` | string | No | Filter by category (single category or comma-separated list) |
-| `lat` | number | No | User latitude (for distance sorting/filtering) |
-| `lng` | number | No | User longitude (for distance sorting/filtering) |
-| `radiusMeters` | number | No | Search radius in meters (requires lat/lng) |
-| `minRating` | number | No | Minimum rating (0-5) |
-| `openNow` | boolean | No | Filter venues that are currently open (requires hours data) |
-| `bbox` | string | No | Bounding box: "minLat,minLng,maxLat,maxLng" (latitude, longitude order) |
-| `page` | number | No | Page number (default: 1). Use with `limit`. Alternative to `cursor`. |
-| `limit` | number | No | Items per page (default: 20, max: 100). Use with `page`. |
-| `cursor` | string | No | Cursor for pagination (alternative to `page`/`limit`). Returns `nextCursor` in meta. |
-| `offset` | number | No | Offset for pagination (alternative to `cursor` or `page`). Use with `limit`. |
-| `sort` | string | No | Sort order: "distance", "rating", "name" (default: "distance" if lat/lng provided) |
+| Parameter      | Type    | Required | Description                                                                          |
+| -------------- | ------- | -------- | ------------------------------------------------------------------------------------ |
+| `q`            | string  | No       | Search query (name, address)                                                         |
+| `cityId`       | UUID    | No       | Filter by city                                                                       |
+| `category`     | string  | No       | Filter by category (single category or comma-separated list)                         |
+| `lat`          | number  | No       | User latitude (for distance sorting/filtering)                                       |
+| `lng`          | number  | No       | User longitude (for distance sorting/filtering)                                      |
+| `radiusMeters` | number  | No       | Search radius in meters (requires lat/lng)                                           |
+| `minRating`    | number  | No       | Minimum rating (0-5)                                                                 |
+| `openNow`      | boolean | No       | Filter venues that are currently open (requires hours data)                          |
+| `bbox`         | string  | No       | Bounding box: "minLat,minLng,maxLat,maxLng" (latitude, longitude order)              |
+| `page`         | number  | No       | Page number (default: 1). Use with `limit`. Alternative to `cursor`.                 |
+| `limit`        | number  | No       | Items per page (default: 20, max: 100). Use with `page`.                             |
+| `cursor`       | string  | No       | Cursor for pagination (alternative to `page`/`limit`). Returns `nextCursor` in meta. |
+| `offset`       | number  | No       | Offset for pagination (alternative to `cursor` or `page`). Use with `limit`.         |
+| `sort`         | string  | No       | Sort order: "distance", "rating", "name" (default: "distance" if lat/lng provided)   |
 
 **Example Requests:**
 
@@ -172,8 +177,8 @@ Get venue details by ID.
 **Path Parameters:**
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Venue ID |
+| --------- | ---- | -------- | ----------- |
+| `id`      | UUID | Yes      | Venue ID    |
 
 **Example Request:**
 
@@ -223,9 +228,9 @@ List available cities.
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `active` | boolean | No | Filter active cities only (default: true) |
+| Parameter | Type    | Required | Description                               |
+| --------- | ------- | -------- | ----------------------------------------- |
+| `active`  | boolean | No       | Filter active cities only (default: true) |
 
 **Example Response:**
 
@@ -276,10 +281,10 @@ Get user's saved venues.
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `page` | number | No | Page number |
-| `limit` | number | No | Items per page |
+| Parameter | Type   | Required | Description    |
+| --------- | ------ | -------- | -------------- |
+| `page`    | number | No       | Page number    |
+| `limit`   | number | No       | Items per page |
 
 #### POST /api/v1/me/saved
 
@@ -302,11 +307,13 @@ Remove saved venue.
 The API supports two approaches for saved venues:
 
 **Option A (Server-side favorites)** - Recommended for cross-device sync:
+
 - Use the endpoints above (`GET /api/v1/me/saved`, `POST /api/v1/me/saved`, `DELETE /api/v1/me/saved/:venueId`)
 - Favorites are stored in the database and persist across devices
 - Requires user authentication
 
 **Option B (Client-side favorites)** - Faster MVP, no API needed:
+
 - Store favorites in bot session/local storage
 - No server-side persistence
 - Faster implementation but no cross-device sync
@@ -357,8 +364,8 @@ Join a plan (required before voting).
 **Path Parameters:**
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Plan ID |
+| --------- | ---- | -------- | ----------- |
+| `id`      | UUID | Yes      | Plan ID     |
 
 **Request Body:**
 
@@ -384,7 +391,9 @@ Get shortlist of venue options for a plan (generated from catalog based on prefe
   "data": [
     {
       "venueId": "venue-uuid",
-      "venue": { /* venue details */ },
+      "venue": {
+        /* venue details */
+      },
       "score": 0.85
     }
   ]
@@ -427,8 +436,8 @@ Request a booking for the winning venue (partner venues only).
 **Path Parameters:**
 
 | Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Plan ID |
+| --------- | ---- | -------- | ----------- |
+| `id`      | UUID | Yes      | Plan ID     |
 
 **Request Body:**
 
@@ -471,11 +480,11 @@ Get pending booking requests for the authenticated merchant's venue(s).
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `status` | string | No | Filter by status: `pending`, `confirmed`, `rejected` |
-| `limit` | number | No | Number of results (default: 20) |
-| `offset` | number | No | Pagination offset |
+| Parameter | Type   | Required | Description                                          |
+| --------- | ------ | -------- | ---------------------------------------------------- |
+| `status`  | string | No       | Filter by status: `pending`, `confirmed`, `rejected` |
+| `limit`   | number | No       | Number of results (default: 20)                      |
+| `offset`  | number | No       | Pagination offset                                    |
 
 **Response:**
 
@@ -511,9 +520,9 @@ Confirm a booking request.
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Booking request ID |
+| Parameter | Type | Required | Description        |
+| --------- | ---- | -------- | ------------------ |
+| `id`      | UUID | Yes      | Booking request ID |
 
 **Request Body:**
 
@@ -543,9 +552,9 @@ Reject a booking request.
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Booking request ID |
+| Parameter | Type | Required | Description        |
+| --------- | ---- | -------- | ------------------ |
+| `id`      | UUID | Yes      | Booking request ID |
 
 **Request Body:**
 
@@ -574,9 +583,9 @@ Propose an alternative time.
 
 **Path Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `id` | UUID | Yes | Booking request ID |
+| Parameter | Type | Required | Description        |
+| --------- | ---- | -------- | ------------------ |
+| `id`      | UUID | Yes      | Booking request ID |
 
 **Request Body:**
 
@@ -607,10 +616,10 @@ Get statistics for the merchant's venue(s).
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `startDate` | string | No | Start date (ISO 8601) |
-| `endDate` | string | No | End date (ISO 8601) |
+| Parameter   | Type   | Required | Description           |
+| ----------- | ------ | -------- | --------------------- |
+| `startDate` | string | No       | Start date (ISO 8601) |
+| `endDate`   | string | No       | End date (ISO 8601)   |
 
 **Response:**
 
@@ -707,14 +716,14 @@ export class VenueFiltersDto {
 
 ## Error Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| `VENUE_NOT_FOUND` | 404 | Venue not found |
-| `CITY_NOT_FOUND` | 404 | City not found |
-| `INVALID_FILTERS` | 400 | Invalid filter parameters |
-| `UNAUTHORIZED` | 401 | Authentication required |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `INTERNAL_ERROR` | 500 | Internal server error |
+| Code              | Status | Description               |
+| ----------------- | ------ | ------------------------- |
+| `VENUE_NOT_FOUND` | 404    | Venue not found           |
+| `CITY_NOT_FOUND`  | 404    | City not found            |
+| `INVALID_FILTERS` | 400    | Invalid filter parameters |
+| `UNAUTHORIZED`    | 401    | Authentication required   |
+| `FORBIDDEN`       | 403    | Insufficient permissions  |
+| `INTERNAL_ERROR`  | 500    | Internal server error     |
 
 ## Rate Limiting
 
@@ -748,15 +757,93 @@ ETag: "abc123"
 
 ## OpenAPI/Swagger
 
-API documentation is available at:
+API documentation is available via Swagger UI:
 
-```
-GET /api/docs
+- **Swagger UI**: `http://localhost:3000/docs`
+- **OpenAPI JSON Spec**: `http://localhost:3000/docs-json`
+
+The Swagger UI provides interactive API documentation where you can:
+
+- Browse all available endpoints
+- View request/response schemas
+- Test endpoints directly from the browser
+- See authentication requirements
+
+### Client Generation
+
+TypeScript clients are automatically generated from the OpenAPI specification for use in bot and miniapp applications.
+
+#### Generating Clients
+
+**From running API:**
+
+```bash
+npm run generate:api-client
 ```
 
-Swagger UI: `http://localhost:3000/api/docs`
+**From local OpenAPI spec file:**
+
+```bash
+npm run generate:api-client:local
+```
+
+**Export OpenAPI spec to file:**
+
+```bash
+npm run swagger:export
+```
+
+#### Generated Clients
+
+The generation script creates two TypeScript clients:
+
+1. **Axios Client** (`libs/shared/src/api-client-axios/`)
+   - For use in the bot (NestJS/Node.js)
+   - Uses axios for HTTP requests
+   - Returns Promises (compatible with async/await)
+
+2. **Angular Client** (`libs/shared/src/api-client-angular/`)
+   - For use in the miniapp (Angular 20+)
+   - Uses Angular's HttpClient
+   - Returns RxJS Observables
+   - Integrates with Angular dependency injection and interceptors
+
+Both clients share the same TypeScript types/models, ensuring consistency across applications.
+
+#### Using Generated Clients
+
+**In Bot (Axios Client):**
+
+```typescript
+import { DefaultApi } from '@whereto/api-client-axios';
+import { Configuration } from '@whereto/api-client-axios';
+
+const config = new Configuration({
+  basePath: 'http://localhost:3000/api/v1',
+  accessToken: 'your-service-token',
+});
+
+const api = new DefaultApi(config);
+const venues = await api.venuesControllerFindAll({ q: 'coffee' });
+```
+
+**In MiniApp (Angular Client):**
+
+```typescript
+import { DefaultService } from '@whereto/api-client-angular';
+import { HttpClient } from '@angular/common/http';
+
+// Inject in your service
+constructor(private api: DefaultService) {}
+
+// Use in methods
+this.api.venuesControllerFindAll({ q: 'coffee' }).subscribe(venues => {
+  // Handle response
+});
+```
+
+**Note:** The generated clients are gitignored. Regenerate them when the API changes.
 
 ## Testing
 
 See `docs/TESTING.md` for API testing guidelines.
-

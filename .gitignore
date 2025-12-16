@@ -28,3 +28,9 @@ www/
 
 # Husky
 .husky/_
+
+# Generated API clients
+libs/shared/src/api-client-axios/
+libs/shared/src/api-client-angular/
+openapi.json
+.openapi-generator/

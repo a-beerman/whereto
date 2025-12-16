@@ -1,9 +1,22 @@
 import { Controller, Get, Param, Query, NotFoundException, Req } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiOkResponse,
+  ApiNotFoundResponse,
+  ApiExtraModels,
+  getSchemaPath,
+} from '@nestjs/swagger';
 import { VenuesService } from '../services/venues.service';
 import { VenueFiltersDto } from '../dto/venue-filters.dto';
 import { VenueResponseDto } from '../dto/venue-response.dto';
 import { MetricsService } from '../../common/services/metrics.service';
 
+@ApiTags('catalog')
+@ApiExtraModels(VenueResponseDto)
 @Controller('venues')
 export class VenuesController {
   constructor(
@@ -12,6 +25,57 @@ export class VenuesController {
   ) {}
 
   @Get()
+  @ApiOperation({ summary: 'Search and filter venues' })
+  @ApiOkResponse({
+    description: 'List of venues matching the search criteria',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(VenueResponseDto) },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            limit: { type: 'number' },
+            offset: { type: 'number' },
+            nextCursor: { type: 'string', nullable: true },
+          },
+        },
+      },
+    },
+  })
+  @ApiQuery({ name: 'q', required: false, description: 'Search query (name, address)' })
+  @ApiQuery({ name: 'cityId', required: false, description: 'Filter by city ID' })
+  @ApiQuery({ name: 'category', required: false, description: 'Filter by category' })
+  @ApiQuery({ name: 'lat', required: false, description: 'User latitude' })
+  @ApiQuery({ name: 'lng', required: false, description: 'User longitude' })
+  @ApiQuery({ name: 'radiusMeters', required: false, description: 'Search radius in meters' })
+  @ApiQuery({ name: 'minRating', required: false, description: 'Minimum rating (0-5)' })
+  @ApiQuery({
+    name: 'openNow',
+    required: false,
+    description: 'Filter venues that are currently open',
+  })
+  @ApiQuery({
+    name: 'bbox',
+    required: false,
+    description: 'Bounding box: "minLat,minLng,maxLat,maxLng"',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (default: 20, max: 100)',
+  })
+  @ApiQuery({ name: 'offset', required: false, description: 'Pagination offset' })
+  @ApiQuery({ name: 'cursor', required: false, description: 'Cursor for pagination' })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    description: 'Sort order: "distance", "rating", "name"',
+  })
   async findAll(
     @Query() filters: VenueFiltersDto,
     @Req() req: any,
@@ -53,6 +117,18 @@ export class VenuesController {
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get venue details by ID' })
+  @ApiParam({ name: 'id', description: 'Venue ID (UUID)' })
+  @ApiOkResponse({
+    description: 'Venue details',
+    schema: {
+      type: 'object',
+      properties: {
+        data: { $ref: getSchemaPath(VenueResponseDto) },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Venue not found' })
   async findOne(@Param('id') id: string, @Req() req: any): Promise<{ data: VenueResponseDto }> {
     const venue = await this.venuesService.findById(id);
     if (!venue) {

@@ -9,6 +9,19 @@ import {
   UseGuards,
   Request,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiQuery,
+  ApiBody,
+  ApiOkResponse,
+  ApiHeader,
+  ApiExtraModels,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { VenueResponseDto } from '../dto/venue-response.dto';
 import { UserSavedVenuesService } from '../services/user-saved-venues.service';
 import { SaveVenueDto } from '../dto/save-venue.dto';
 import { MetricsService } from '../../common/services/metrics.service';
@@ -30,6 +43,8 @@ class PaginationDto {
   offset?: number = 0;
 }
 
+@ApiTags('catalog')
+@ApiExtraModels(VenueResponseDto)
 @Controller('me/saved')
 export class UserSavedVenuesController {
   constructor(
@@ -49,12 +64,52 @@ export class UserSavedVenuesController {
   }
 
   @Get()
+  @ApiOperation({ summary: 'Get user saved venues' })
+  @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    description: 'Items per page (default: 20, max: 100)',
+  })
+  @ApiQuery({ name: 'offset', required: false, description: 'Pagination offset' })
+  @ApiOkResponse({
+    description: 'List of saved venues',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { $ref: getSchemaPath(VenueResponseDto) },
+        },
+        meta: {
+          type: 'object',
+          properties: {
+            total: { type: 'number' },
+            limit: { type: 'number' },
+            offset: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
   async getSavedVenues(@Request() req: Request, @Query() query: PaginationDto) {
     const userId = this.getUserId(req);
     return this.savedVenuesService.getSavedVenues(userId, query.limit || 20, query.offset || 0);
   }
 
   @Post()
+  @ApiOperation({ summary: 'Save a venue for user' })
+  @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
+  @ApiBody({ type: SaveVenueDto })
+  @ApiOkResponse({
+    description: 'Venue saved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
   async saveVenue(@Request() req: Request, @Body() dto: SaveVenueDto) {
     const userId = this.getUserId(req);
     await this.savedVenuesService.saveVenue(userId, dto.venueId);
@@ -71,6 +126,18 @@ export class UserSavedVenuesController {
   }
 
   @Delete(':venueId')
+  @ApiOperation({ summary: 'Remove saved venue' })
+  @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
+  @ApiParam({ name: 'venueId', description: 'Venue ID (UUID)' })
+  @ApiOkResponse({
+    description: 'Venue removed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        message: { type: 'string' },
+      },
+    },
+  })
   async removeSavedVenue(@Request() req: Request, @Param('venueId') venueId: string) {
     const userId = this.getUserId(req);
     return this.savedVenuesService.removeSavedVenue(userId, venueId);

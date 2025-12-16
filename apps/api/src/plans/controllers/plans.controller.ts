@@ -8,6 +8,19 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiParam,
+  ApiBody,
+  ApiOkResponse,
+  ApiNotFoundResponse,
+  ApiBadRequestResponse,
+  ApiExtraModels,
+  getSchemaPath,
+} from '@nestjs/swagger';
+import { VenueResponseDto } from '../../catalog/dto/venue-response.dto';
 import { PlansService } from '../services/plans.service';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { JoinPlanDto } from '../dto/join-plan.dto';
@@ -17,6 +30,8 @@ import { BookingRequestService } from '../../merchant/services/booking-request.s
 import { CreateBookingRequestDto } from '../../merchant/dto/create-booking-request.dto';
 import { MetricsService } from '../../common/services/metrics.service';
 
+@ApiTags('plans')
+@ApiExtraModels(VenueResponseDto)
 @Controller('plans')
 export class PlansController {
   constructor(
@@ -35,6 +50,27 @@ export class PlansController {
   }
 
   @Post()
+  @ApiOperation({ summary: 'Create a new plan' })
+  @ApiBody({ type: CreatePlanDto })
+  @ApiOkResponse({
+    description: 'Plan created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            date: { type: 'string', format: 'date' },
+            time: { type: 'string' },
+            status: { type: 'string' },
+            initiatorId: { type: 'string' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
   async createPlan(@Request() req: Request, @Body() dto: CreatePlanDto) {
     const plan = await this.plansService.createPlan({
       telegramChatId: parseInt(dto.telegramChatId, 10),
@@ -67,6 +103,23 @@ export class PlansController {
   }
 
   @Post(':id/join')
+  @ApiOperation({ summary: 'Join a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiBody({ type: JoinPlanDto })
+  @ApiOkResponse({
+    description: 'Successfully joined plan',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            joined: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  })
   async joinPlan(@Param('id') id: string, @Body() dto: JoinPlanDto) {
     await this.plansService.joinPlan(id, dto.userId, dto.preferences, {
       lat: dto.locationLat ? parseFloat(dto.locationLat) : undefined,
@@ -76,12 +129,67 @@ export class PlansController {
   }
 
   @Get(':id/options')
+  @ApiOperation({ summary: 'Get shortlist of venue options for a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiOkResponse({
+    description: 'Shortlist of venue options',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              venueId: { type: 'string' },
+              venue: { $ref: getSchemaPath(VenueResponseDto) },
+              score: { type: 'number' },
+            },
+          },
+        },
+        meetingPoint: {
+          type: 'object',
+          properties: {
+            lat: { type: 'number' },
+            lng: { type: 'number' },
+          },
+        },
+      },
+    },
+  })
   async getShortlist(@Param('id') id: string) {
     const result = await this.plansService.getShortlist(id);
     return { data: result.venues, meetingPoint: result.meetingPoint };
   }
 
   @Post(':id/vote')
+  @ApiOperation({ summary: 'Start voting for a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiOkResponse({
+    description: 'Voting started and shortlist generated',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            vote: {
+              type: 'object',
+              properties: {
+                id: { type: 'string' },
+                planId: { type: 'string' },
+                status: { type: 'string' },
+              },
+            },
+            options: {
+              type: 'array',
+              items: { $ref: getSchemaPath(VenueResponseDto) },
+            },
+          },
+        },
+      },
+    },
+  })
   async startVoting(@Param('id') id: string) {
     // Start voting and generate shortlist
     const vote = await this.plansService.startVoting(id);
@@ -95,24 +203,113 @@ export class PlansController {
   }
 
   @Post(':id/vote/cast')
+  @ApiOperation({ summary: 'Cast a vote for a venue in a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiBody({ type: VoteDto })
+  @ApiOkResponse({
+    description: 'Vote cast successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            voted: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  })
   async castVote(@Param('id') id: string, @Body() dto: VoteDto) {
     await this.plansService.castVote(id, dto.userId, dto.venueId);
     return { data: { voted: true } };
   }
 
   @Post(':id/close')
+  @ApiOperation({ summary: 'Close a plan (initiator only)' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiBody({ type: ClosePlanDto })
+  @ApiOkResponse({
+    description: 'Plan closed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            winner: { $ref: getSchemaPath(VenueResponseDto) },
+            status: { type: 'string' },
+          },
+        },
+      },
+    },
+  })
   async closePlan(@Param('id') id: string, @Body() dto: ClosePlanDto) {
     const result = await this.plansService.closePlan(id, dto.initiatorId);
     return { data: result };
   }
 
   @Get(':id')
+  @ApiOperation({ summary: 'Get plan details including votes and result' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiOkResponse({
+    description: 'Plan details',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            date: { type: 'string', format: 'date' },
+            time: { type: 'string' },
+            status: { type: 'string' },
+            initiatorId: { type: 'string' },
+            participants: {
+              type: 'array',
+              items: { type: 'object' },
+            },
+            votes: {
+              type: 'array',
+              items: { type: 'object' },
+            },
+          },
+        },
+      },
+    },
+  })
   async getPlanDetails(@Param('id') id: string) {
     const plan = await this.plansService.getPlanDetails(id);
     return { data: plan };
   }
 
   @Post(':id/booking-request')
+  @ApiOperation({ summary: 'Request a booking for the winning venue (partner venues only)' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiBody({ type: CreateBookingRequestDto })
+  @ApiOkResponse({
+    description: 'Booking request created successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            id: { type: 'string' },
+            planId: { type: 'string' },
+            venueId: { type: 'string' },
+            status: { type: 'string' },
+            requestedDate: { type: 'string', format: 'date' },
+            requestedTime: { type: 'string' },
+            participantsCount: { type: 'number' },
+            createdAt: { type: 'string', format: 'date-time' },
+          },
+        },
+      },
+    },
+  })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
+  @ApiBadRequestResponse({ description: 'Plan is not closed' })
   async createBookingRequest(@Param('id') planId: string, @Body() dto: CreateBookingRequestDto) {
     // Verify plan exists and is closed
     const plan = await this.plansService.getPlanDetails(planId);

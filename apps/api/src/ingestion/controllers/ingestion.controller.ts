@@ -1,12 +1,38 @@
 import { Controller, Post, Param, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiParam, ApiOkResponse } from '@nestjs/swagger';
 import { SyncCityJob } from '../jobs/sync-city.job';
 
-// TODO: Add authentication guard for admin/operator access
+@ApiTags('ingestion')
 @Controller('ingestion')
 export class IngestionController {
   constructor(private readonly syncCityJob: SyncCityJob) {}
 
   @Post('sync/:cityId')
+  @ApiOperation({ summary: 'Sync venues for a city from Google Places' })
+  @ApiParam({ name: 'cityId', description: 'City ID (UUID)' })
+  @ApiOkResponse({
+    description: 'City sync completed',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean' },
+            metrics: {
+              type: 'object',
+              properties: {
+                duration: { type: 'number' },
+                venuesProcessed: { type: 'number' },
+                duplicates: { type: 'number' },
+                errors: { type: 'number' },
+              },
+            },
+          },
+        },
+      },
+    },
+  })
   async syncCity(@Param('cityId') cityId: string) {
     const metrics = await this.syncCityJob.syncCity(cityId);
     return {
