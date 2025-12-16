@@ -11,16 +11,19 @@ export class ParticipantRepository {
   ) {}
 
   async findByPlanId(planId: string): Promise<Participant[]> {
-    return this.repository.find({
-      where: { planId },
-      order: { joinedAt: 'ASC' },
-    });
+    return this.repository
+      .createQueryBuilder('participant')
+      .where('participant.plan_id = :planId', { planId })
+      .orderBy('participant.joined_at', 'ASC')
+      .getMany();
   }
 
   async findByPlanIdAndUserId(planId: string, userId: string): Promise<Participant | null> {
-    return this.repository.findOne({
-      where: { planId, userId },
-    });
+    return this.repository
+      .createQueryBuilder('participant')
+      .where('participant.plan_id = :planId', { planId })
+      .andWhere('participant.user_id = :userId', { userId })
+      .getOne();
   }
 
   async create(participant: Partial<Participant>): Promise<Participant> {

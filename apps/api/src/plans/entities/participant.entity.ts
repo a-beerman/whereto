@@ -23,7 +23,7 @@ export class Participant {
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'planId' })
+  @JoinColumn()
   plan!: Plan;
 
   @Column({ type: 'varchar', length: 255 })

@@ -69,7 +69,7 @@ export class Plan {
   winningVenueId?: string;
 
   @ManyToOne(() => Venue, { nullable: true })
-  @JoinColumn({ name: 'winningVenueId' })
+  @JoinColumn()
   winningVenue?: Venue;
 
   @CreateDateColumn({ type: 'timestamptz' })

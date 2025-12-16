@@ -1,6 +1,8 @@
-import { IsString, IsOptional, IsObject, ValidateNested, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsObject, ValidateNested, IsBoolean, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { BudgetLevel } from './create-plan.dto';
+import { ApiEnumPropertyOptional } from '../../common/decorators/api-enum-property.decorator';
 
 class PreferencesDto {
   @ApiPropertyOptional({ description: 'Format/type', example: 'dinner' })
@@ -8,10 +10,10 @@ class PreferencesDto {
   @IsString()
   format?: string;
 
-  @ApiPropertyOptional({ description: 'Budget level', enum: ['$', '$$', '$$$'] })
+  @ApiEnumPropertyOptional(BudgetLevel, 'Budget level', BudgetLevel.MEDIUM)
   @IsOptional()
-  @IsString()
-  budget?: string;
+  @IsEnum(BudgetLevel)
+  budget?: BudgetLevel;
 
   @ApiPropertyOptional({ description: 'Cuisine preferences' })
   @IsOptional()

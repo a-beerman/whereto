@@ -11,18 +11,19 @@ export class VoteRepository {
   ) {}
 
   async findByPlanId(planId: string): Promise<Vote | null> {
-    return this.repository.findOne({
-      where: { planId },
-      relations: ['voteCasts', 'voteCasts.venue', 'winnerVenue'],
-      order: { startedAt: 'DESC' },
-    });
+    return this.repository
+      .createQueryBuilder('vote')
+      .where('vote.plan_id = :planId', { planId })
+      .orderBy('vote.started_at', 'DESC')
+      .getOne();
   }
 
   async findActiveByPlanId(planId: string): Promise<Vote | null> {
-    return this.repository.findOne({
-      where: { planId, status: 'open' },
-      relations: ['voteCasts', 'voteCasts.venue', 'voteCasts.userId'],
-    });
+    return this.repository
+      .createQueryBuilder('vote')
+      .where('vote.plan_id = :planId', { planId })
+      .andWhere('vote.status = :status', { status: 'open' })
+      .getOne();
   }
 
   async create(vote: Partial<Vote>): Promise<Vote> {
@@ -31,12 +32,17 @@ export class VoteRepository {
   }
 
   async close(id: string, winnerVenueId: string): Promise<Vote> {
-    await this.repository.update(id, {
-      status: 'closed',
-      endedAt: new Date(),
-      winnerVenueId,
-    });
-    const updated = await this.repository.findOne({ where: { id }, relations: ['winnerVenue'] });
+    await this.repository
+      .createQueryBuilder()
+      .update(Vote)
+      .set({
+        status: 'closed',
+        endedAt: new Date(),
+        winnerVenueId,
+      })
+      .where('id = :id', { id })
+      .execute();
+    const updated = await this.repository.findOne({ where: { id } });
     if (!updated) {
       throw new Error(`Vote with id ${id} not found`);
     }

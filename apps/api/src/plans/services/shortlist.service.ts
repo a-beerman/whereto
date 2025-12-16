@@ -85,7 +85,8 @@ export class ShortlistService {
   }
 
   /**
-   * Generate shortlist of 5 venues for a plan
+   * Generate shortlist of venues for a plan
+   * Returns up to 20 venues to allow rotation in the bot
    */
   async generateShortlist(
     plan: Plan,
@@ -108,10 +109,10 @@ export class ShortlistService {
     // Score and rank venues
     const scored = this.scoreVenues(searchResult.venues, meetingPoint, plan, participants);
 
-    // Sort by total score and take top 5
+    // Sort by total score and take top 20 (allows rotation: 5 venues per poll × 4 rotations)
     const topVenues = scored
       .sort((a, b) => b.totalScore - a.totalScore)
-      .slice(0, 5)
+      .slice(0, 20)
       .map((s) => s.venue);
 
     return { venues: topVenues, meetingPoint };

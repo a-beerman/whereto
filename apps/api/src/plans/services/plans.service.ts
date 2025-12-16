@@ -193,6 +193,36 @@ export class PlansService {
     await this.voteCastRepository.upsert(vote.id, planId, userId, venueId);
   }
 
+  async removeVote(planId: string, userId: string, venueId: string): Promise<void> {
+    const plan = await this.planRepository.findById(planId);
+    if (!plan) {
+      throw new NotFoundException(`Plan with id ${planId} not found`);
+    }
+
+    if (plan.status !== 'voting') {
+      throw new BadRequestException(`Cannot remove vote for plan with status ${plan.status}`);
+    }
+
+    // Get active vote
+    const vote = await this.voteRepository.findActiveByPlanId(planId);
+    if (!vote) {
+      throw new BadRequestException('No active vote found for this plan');
+    }
+
+    // Remove vote
+    await this.voteCastRepository.delete(vote.id, userId, venueId);
+  }
+
+  async getUserVotes(planId: string, userId: string): Promise<string[]> {
+    const vote = await this.voteRepository.findActiveByPlanId(planId);
+    if (!vote) {
+      return [];
+    }
+
+    const voteCasts = await this.voteCastRepository.findByVoteIdAndUserIdAll(vote.id, userId);
+    return voteCasts.map((cast) => cast.venueId);
+  }
+
   async closePlan(planId: string, initiatorId: string): Promise<{ plan: Plan; winner: any }> {
     const plan = await this.planRepository.findById(planId);
     if (!plan) {

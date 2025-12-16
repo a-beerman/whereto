@@ -26,7 +26,7 @@ export class BookingRequest {
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'planId' })
+  @JoinColumn()
   plan!: Plan;
 
   @Column({ type: 'uuid' })
@@ -34,7 +34,7 @@ export class BookingRequest {
   venueId!: string;
 
   @ManyToOne(() => Venue)
-  @JoinColumn({ name: 'venueId' })
+  @JoinColumn()
   venue!: Venue;
 
   @Column({ type: 'date' })

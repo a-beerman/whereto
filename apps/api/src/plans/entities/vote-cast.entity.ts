@@ -13,7 +13,7 @@ import { Plan } from './plan.entity';
 import { Venue } from '../../catalog/entities/venue.entity';
 
 @Entity('vote_casts')
-@Unique(['voteId', 'userId'])
+@Unique(['voteId', 'userId', 'venueId']) // Allow multiple votes per user (multiple choice)
 @Index(['voteId'])
 @Index(['planId'])
 @Index(['userId'])
@@ -27,7 +27,7 @@ export class VoteCast {
   voteId!: string;
 
   @ManyToOne(() => Vote, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'voteId' })
+  @JoinColumn()
   vote!: Vote;
 
   @Column({ type: 'uuid' })
@@ -35,7 +35,7 @@ export class VoteCast {
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'planId' })
+  @JoinColumn()
   plan!: Plan;
 
   @Column({ type: 'varchar', length: 255 })
@@ -47,7 +47,7 @@ export class VoteCast {
   venueId!: string;
 
   @ManyToOne(() => Venue)
-  @JoinColumn({ name: 'venueId' })
+  @JoinColumn()
   venue!: Venue;
 
   @CreateDateColumn({ type: 'timestamptz' })

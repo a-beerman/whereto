@@ -25,7 +25,7 @@ export class Vote {
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'planId' })
+  @JoinColumn()
   plan!: Plan;
 
   @Column({
@@ -45,7 +45,7 @@ export class Vote {
   winnerVenueId?: string;
 
   @ManyToOne(() => Venue, { nullable: true })
-  @JoinColumn({ name: 'winnerVenueId' })
+  @JoinColumn()
   winnerVenue?: Venue;
 
   @CreateDateColumn({ type: 'timestamptz' })

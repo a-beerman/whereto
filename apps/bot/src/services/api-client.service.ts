@@ -237,6 +237,23 @@ export class ApiClientService {
   }
 
   /**
+   * Remove a vote
+   */
+  async removeVote(planId: string, userId: string, venueId: string): Promise<{ data: unknown }> {
+    const dto: VoteDto = { userId, venueId };
+    const response = await this.plansApi.plansControllerRemoveVote(planId, dto);
+    return { data: response.data.data };
+  }
+
+  /**
+   * Get all votes for a user in a plan
+   */
+  async getUserVotes(planId: string, userId: string): Promise<{ data: string[] }> {
+    const response = await this.plansApi.plansControllerGetUserVotes(planId, userId);
+    return { data: (response.data.data || []) as string[] };
+  }
+
+  /**
    * Close a plan
    */
   async closePlan(planId: string, initiatorId: string): Promise<{ data: unknown }> {

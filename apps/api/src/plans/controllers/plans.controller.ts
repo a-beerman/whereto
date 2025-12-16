@@ -7,6 +7,7 @@ import {
   Request,
   NotFoundException,
   BadRequestException,
+  Delete,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -223,6 +224,50 @@ export class PlansController {
   async castVote(@Param('id') id: string, @Body() dto: VoteDto) {
     await this.plansService.castVote(id, dto.userId, dto.venueId);
     return { data: { voted: true } };
+  }
+
+  @Delete(':id/vote/cast')
+  @ApiOperation({ summary: 'Remove a vote for a venue in a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiBody({ type: VoteDto })
+  @ApiOkResponse({
+    description: 'Vote removed successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'object',
+          properties: {
+            removed: { type: 'boolean' },
+          },
+        },
+      },
+    },
+  })
+  async removeVote(@Param('id') id: string, @Body() dto: VoteDto) {
+    await this.plansService.removeVote(id, dto.userId, dto.venueId);
+    return { data: { removed: true } };
+  }
+
+  @Get(':id/vote/user/:userId')
+  @ApiOperation({ summary: 'Get all votes for a user in a plan' })
+  @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
+  @ApiParam({ name: 'userId', description: 'User ID (Telegram user ID)' })
+  @ApiOkResponse({
+    description: 'User votes retrieved successfully',
+    schema: {
+      type: 'object',
+      properties: {
+        data: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+      },
+    },
+  })
+  async getUserVotes(@Param('id') id: string, @Param('userId') userId: string) {
+    const venueIds = await this.plansService.getUserVotes(id, userId);
+    return { data: venueIds };
   }
 
   @Post(':id/close')

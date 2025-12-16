@@ -1,4 +1,4 @@
-import { Telegraf, Context } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import { ApiClientService } from './services/api-client.service';
 import { StateService } from './services/state.service';
 import { StartHandler } from './handlers/start.handler';
@@ -27,99 +27,182 @@ export class BotModule {
   }
 
   registerHandlers() {
-    // Start command
-    this.bot.start((ctx) => this.startHandler.handle(ctx));
+    // ============ Group Welcome ============
 
-    // City selection callback
+    // When bot is added to a group - send welcome message
+    this.bot.on('my_chat_member', async (ctx) => {
+      const update = ctx.myChatMember;
+      const newStatus = update.new_chat_member.status;
+      const chat = update.chat;
+
+      if (
+        (chat.type === 'group' || chat.type === 'supergroup') &&
+        (newStatus === 'member' || newStatus === 'administrator')
+      ) {
+        await ctx.telegram.sendMessage(
+          chat.id,
+          `👋 Привет! Я *WhereTo Bot* — помогу выбрать место для встречи!
+
+Нажми кнопку ниже, чтобы создать план:`,
+          {
+            parse_mode: 'Markdown',
+            reply_markup: {
+              inline_keyboard: [
+                [{ text: '📅 Создать план встречи', callback_data: 'start_plan' }],
+                [{ text: '❓ Помощь', callback_data: 'show_help' }],
+              ],
+            },
+          },
+        );
+      }
+    });
+
+    // Start plan from button
+    this.bot.action('start_plan', async (ctx) => {
+      await this.planHandler.handlePlanCommand(ctx);
+      await ctx.answerCbQuery();
+    });
+
+    // Show help from button
+    this.bot.action('show_help', async (ctx) => {
+      await ctx.reply(
+        `🤖 *Как пользоваться в группе:*
+
+1. Нажми "📅 Создать план встречи"
+2. Бот напишет тебе в личку
+3. Выбери дату, время, район, бюджет
+4. Бот отправит опрос в группу
+5. Голосуйте в опросе
+6. Бот выберет победителя! 🏆
+
+_Каждый участник должен сначала выбрать город в личном чате с ботом (/start)_`,
+        { parse_mode: 'Markdown' },
+      );
+      await ctx.answerCbQuery();
+    });
+
+    // Listen for trigger words in groups
+    this.bot.hears(/^(план|plan|куда|где|встреча)$/i, async (ctx) => {
+      if (ctx.chat?.type === 'group' || ctx.chat?.type === 'supergroup') {
+        await ctx.reply('Что делаем?', {
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '📅 Создать план встречи', callback_data: 'start_plan' }],
+              [{ text: '🔍 Найти место', callback_data: 'search_prompt' }],
+            ],
+          },
+        });
+      }
+    });
+
+    // Search prompt from group
+    this.bot.action('search_prompt', async (ctx) => {
+      await ctx.reply(
+        'Чтобы искать места, напиши мне в личку:\n👉 @' +
+          (ctx.botInfo?.username || 'wheretovenue_bot'),
+      );
+      await ctx.answerCbQuery();
+    });
+
+    // ============ Start Command ============
+
+    this.bot.start(async (ctx) => {
+      const startPayload = ctx.startPayload;
+
+      // Check if this is a redirect from group for plan creation
+      if (startPayload && startPayload.startsWith('plan_')) {
+        const groupChatId = startPayload.replace('plan_', '');
+        await this.planHandler.handleStartWithPlan(ctx, groupChatId);
+        return;
+      }
+
+      // Normal start
+      await this.startHandler.handle(ctx);
+    });
+
+    // ============ Basic Commands ============
+
+    this.bot.command('help', async (ctx) => {
+      const helpText = `
+🤖 *WhereTo Bot* — найди место для встречи!
+
+*Команды:*
+/start — выбрать город и начать поиск
+/plan — создать план встречи (работает в группах)
+/saved — посмотреть сохранённые места
+
+*Как искать:*
+1. Выбери город через /start
+2. Выбери категорию (🍽️ Еда, ☕ Кофе, 🍺 Бар)
+3. Или напиши запрос (пицца, суши, вино...)
+
+*Как планировать в группе:*
+1. Добавь бота в групповой чат
+2. Нажми "📅 Создать план встречи"
+3. Выбери параметры в личном чате
+4. Голосуйте в опросе
+5. Бот объявит победителя! 🏆
+      `.trim();
+
+      await ctx.reply(helpText, { parse_mode: 'Markdown' });
+    });
+
+    this.bot.command('saved', async (ctx) => {
+      await this.savedHandler.handleSavedList(ctx);
+    });
+
+    this.bot.command('plan', async (ctx) => {
+      await this.planHandler.handlePlanCommand(ctx);
+    });
+
+    // ============ City Selection ============
+
     this.bot.action(/^city:(.+)$/, async (ctx) => {
       const cityId = ctx.match[1];
       await this.startHandler.handleCitySelection(ctx, cityId);
       await ctx.answerCbQuery();
     });
 
-    // Category selection
+    // ============ Search & Categories ============
+
     this.bot.action(/^category:(.+)$/, async (ctx) => {
       const category = ctx.match[1];
       await this.searchHandler.handleCategory(ctx, category);
       await ctx.answerCbQuery();
     });
 
-    // Search prompt
     this.bot.action('search', async (ctx) => {
       await this.searchHandler.handleSearchPrompt(ctx);
       await ctx.answerCbQuery();
     });
 
-    // Text message handler - handles search queries and plan creation input
-    this.bot.on('text', async (ctx) => {
-      // Skip if it's a command
-      if (ctx.message.text.startsWith('/')) {
-        return;
-      }
+    // ============ Venue Actions ============
 
-      const userId = ctx.from?.id.toString() || '';
-      const chatId = ctx.chat?.id;
-
-      // Check if waiting for plan input
-      const waitingForPlanInput = (this.stateService as any).waitingForPlanInput;
-      if (waitingForPlanInput && chatId) {
-        const waitingType = waitingForPlanInput.get(`${chatId}:${userId}`);
-        if (waitingType === 'date') {
-          // Try to parse date from text
-          const dateStr = ctx.message.text;
-          const date = this.planHandler['parseDate'](dateStr);
-          if (date) {
-            const dateFormatted = date.toISOString().split('T')[0];
-            await this.planHandler.handleDateSelection(ctx, dateFormatted);
-            waitingForPlanInput.delete(`${chatId}:${userId}`);
-            return;
-          }
-        } else if (waitingType === 'time') {
-          // Try to parse time from text (HH:MM format)
-          const timeStr = ctx.message.text;
-          if (/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr)) {
-            await this.planHandler.handleTimeSelection(ctx, timeStr);
-            waitingForPlanInput.delete(`${chatId}:${userId}`);
-            return;
-          }
-        }
-      }
-
-      // Handle as search query if in search mode
-      const state = this.stateService.getUserState(userId);
-      if (state.searchQuery === '' || (state.cityId && !state.currentCategory)) {
-        await this.searchHandler.handleSearchQuery(ctx, ctx.message.text);
-      }
-    });
-
-    // Venue view
     this.bot.action(/^venue:(.+)$/, async (ctx) => {
       const venueId = ctx.match[1];
       await this.venueHandler.handleVenueView(ctx, venueId);
       await ctx.answerCbQuery();
     });
 
-    // Save venue
     this.bot.action(/^save:(.+)$/, async (ctx) => {
       const venueId = ctx.match[1];
       await this.venueHandler.handleSaveVenue(ctx, venueId);
     });
 
-    // Route
     this.bot.action(/^route:(.+)$/, async (ctx) => {
       const venueId = ctx.match[1];
       await this.venueHandler.handleRoute(ctx, venueId);
       await ctx.answerCbQuery();
     });
 
-    // Share
     this.bot.action(/^share:(.+)$/, async (ctx) => {
       const venueId = ctx.match[1];
       await this.venueHandler.handleShare(ctx, venueId);
       await ctx.answerCbQuery();
     });
 
-    // Back to categories
+    // ============ Navigation ============
+
     this.bot.action('back:categories', async (ctx) => {
       const userId = ctx.from?.id.toString() || '';
       this.stateService.updateUserState(userId, {
@@ -141,7 +224,6 @@ export class BotModule {
       await ctx.answerCbQuery();
     });
 
-    // Back to list
     this.bot.action('back:list', async (ctx) => {
       const userId = ctx.from?.id.toString() || '';
       const state = this.stateService.getUserState(userId);
@@ -156,17 +238,8 @@ export class BotModule {
       await ctx.answerCbQuery();
     });
 
-    // Saved venues command
-    this.bot.command('saved', async (ctx) => {
-      await this.savedHandler.handleSavedList(ctx);
-    });
+    // ============ Plan Creation (DM Flow) ============
 
-    // Plan command
-    this.bot.command('plan', async (ctx) => {
-      await this.planHandler.handlePlanCommand(ctx);
-    });
-
-    // Plan creation callbacks
     this.bot.action(/^plan:date:(.+)$/, async (ctx) => {
       const date = ctx.match[1];
       await this.planHandler.handleDateSelection(ctx, date);
@@ -189,41 +262,104 @@ export class BotModule {
 
     this.bot.action(/^plan:format:(.+)$/, async (ctx) => {
       const format = ctx.match[1];
-      await this.planHandler.handleFormatSelection(ctx, format);
+      await this.planHandler.handleFormatSelection(ctx, format, this.bot);
     });
 
     this.bot.action('plan:cancel', async (ctx) => {
       await this.planHandler.handleCancel(ctx);
     });
 
-    // Plan join
-    this.bot.action(/^plan:join:(.+)$/, async (ctx) => {
-      const planId = ctx.match[1];
-      await this.planHandler.handleJoinPlan(ctx, planId);
+    // ============ Plan Actions (Group - Short Callbacks) ============
+
+    // Join plan: pj:<shortPlanId>
+    this.bot.action(/^pj:(.+)$/, async (ctx) => {
+      const shortPlanId = ctx.match[1];
+      await this.planHandler.handleJoinPlan(ctx, shortPlanId);
     });
 
-    this.bot.action(/^plan:join:confirm:(.+)$/, async (ctx) => {
-      const planId = ctx.match[1];
-      await this.planHandler.handleJoinConfirm(ctx, planId);
+    // Show options / start poll: po:<shortPlanId>
+    this.bot.action(/^po:(.+)$/, async (ctx) => {
+      const shortPlanId = ctx.match[1];
+      await this.planHandler.handleShowOptions(ctx, shortPlanId, this.bot);
     });
 
-    // Plan options
-    this.bot.action(/^plan:options:(.+)$/, async (ctx) => {
-      const planId = ctx.match[1];
-      await this.planHandler.handleShowOptions(ctx, planId);
+    // Rotate to next 5 venues: pr:<shortPlanId>
+    this.bot.action(/^pr:(.+)$/, async (ctx) => {
+      const shortPlanId = ctx.match[1];
+      await this.planHandler.handleRotateVenues(ctx, shortPlanId, this.bot);
     });
 
-    // Plan vote
-    this.bot.action(/^plan:vote:(.+):(.+)$/, async (ctx) => {
-      const planId = ctx.match[1];
-      const venueId = ctx.match[2];
-      await this.planHandler.handleVote(ctx, planId, venueId);
+    // Close plan / stop poll: px:<shortPlanId>
+    this.bot.action(/^px:(.+)$/, async (ctx) => {
+      const shortPlanId = ctx.match[1];
+      await this.planHandler.handleClosePlan(ctx, shortPlanId, this.bot);
     });
 
-    // Plan close
-    this.bot.action(/^plan:close:(.+)$/, async (ctx) => {
-      const planId = ctx.match[1];
-      await this.planHandler.handleClosePlan(ctx, planId);
+    // ============ Poll Answer Handler ============
+
+    this.bot.on('poll_answer', async (ctx) => {
+      const pollAnswer = ctx.pollAnswer;
+      const user = pollAnswer.user;
+      if (!user) return; // Anonymous poll answer
+
+      const userId = user.id.toString();
+      // Convert poll ID to string for consistent handling
+      const pollId = String(pollAnswer.poll_id);
+      const optionIds = pollAnswer.option_ids;
+
+      // Handle single choice poll answer
+      // For single choice, optionIds contains at most one element
+      if (optionIds.length > 0) {
+        // User selected an option (or changed selection)
+        const optionIndex = optionIds[0];
+        await this.planHandler.handlePollAnswerSingle(userId, pollId, optionIndex);
+      } else {
+        // User removed their vote
+        await this.planHandler.handlePollAnswerRemoved(userId, pollId);
+      }
+    });
+
+    // ============ Text Message Handler ============
+
+    this.bot.on('text', async (ctx) => {
+      const text = ctx.message.text;
+      const botUsername = ctx.botInfo?.username?.toLowerCase() || '';
+
+      // Handle commands with @botname (e.g., /plan@WhereTo_City_Bot)
+      if (text.startsWith('/')) {
+        const commandMatch = text.match(/^\/(\w+)(?:@(\w+))?/);
+        if (commandMatch) {
+          const command = commandMatch[1].toLowerCase();
+          const mentionedBot = commandMatch[2]?.toLowerCase();
+
+          if (!mentionedBot || mentionedBot === botUsername) {
+            if (command === 'plan') {
+              await this.planHandler.handlePlanCommand(ctx);
+              return;
+            }
+            if (command === 'start') {
+              await this.startHandler.handle(ctx);
+              return;
+            }
+            if (command === 'saved') {
+              await this.savedHandler.handleSavedList(ctx);
+              return;
+            }
+          }
+        }
+        return;
+      }
+
+      // Handle search in private chat
+      const userId = ctx.from?.id.toString() || '';
+      const state = this.stateService.getUserState(userId);
+
+      if (ctx.chat?.type === 'private' && state.cityId) {
+        // Check if user is in search mode
+        if (state.searchQuery === '' || !state.currentCategory) {
+          await this.searchHandler.handleSearchQuery(ctx, text);
+        }
+      }
     });
   }
 }

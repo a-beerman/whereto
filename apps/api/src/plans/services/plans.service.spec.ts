@@ -10,6 +10,7 @@ import { VenueRepository } from '../../catalog/repositories/venue.repository';
 import { Plan } from '../entities/plan.entity';
 import { Participant } from '../entities/participant.entity';
 import { Vote } from '../entities/vote.entity';
+import { BudgetLevel } from '../dto/create-plan.dto';
 
 describe('PlansService', () => {
   let service: PlansService;
@@ -108,7 +109,7 @@ describe('PlansService', () => {
         time: '19:00',
         cityId: 'city-123',
         area: 'city-center',
-        budget: '$$',
+        budget: BudgetLevel.MEDIUM,
         format: 'dinner',
       };
 

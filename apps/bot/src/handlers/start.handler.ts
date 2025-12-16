@@ -11,6 +11,8 @@ export class StartHandler {
 
   async handle(ctx: Context) {
     try {
+      const userId = ctx.from?.id.toString() || '';
+
       // Get available cities
       const citiesResponse = await this.apiClient.getCities();
       const cities = citiesResponse.data || [];
@@ -24,6 +26,12 @@ export class StartHandler {
       const validCities = cities
         .filter((c) => c.id && c.name)
         .map((c) => ({ id: c.id!, name: c.name! }));
+
+      // If only one city available, auto-select it
+      if (validCities.length === 1) {
+        await this.handleCitySelection(ctx, validCities[0].id);
+        return;
+      }
 
       await ctx.reply('Привет! В каком городе ищем места?', {
         reply_markup: getCityKeyboard(validCities),

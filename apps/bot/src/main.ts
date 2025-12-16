@@ -9,6 +9,14 @@ async function bootstrap() {
 
   const bot = new Telegraf(botToken);
 
+  // Set bot commands (visible in "/" menu)
+  await bot.telegram.setMyCommands([
+    { command: 'start', description: '🏠 Начать / выбрать город' },
+    { command: 'plan', description: '📅 Создать план встречи (в группе)' },
+    { command: 'saved', description: '❤️ Мои сохранённые места' },
+    { command: 'help', description: '❓ Помощь' },
+  ]);
+
   // Register handlers
   const botModule = new BotModule(bot);
   botModule.registerHandlers();
@@ -23,6 +31,7 @@ async function bootstrap() {
   await bot.launch();
 
   console.log('🤖 Telegram bot is running...');
+  console.log('📋 Commands registered: /start, /plan, /saved, /help');
 
   // Graceful shutdown
   process.once('SIGINT', () => bot.stop('SIGINT'));

@@ -1,5 +1,12 @@
-import { IsString, IsDateString, IsOptional, IsUUID, Matches } from 'class-validator';
+import { IsString, IsDateString, IsOptional, IsUUID, Matches, IsEnum } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiEnumPropertyOptional } from '../../common/decorators/api-enum-property.decorator';
+
+export enum BudgetLevel {
+  LOW = '$',
+  MEDIUM = '$$',
+  HIGH = '$$$',
+}
 
 export class CreatePlanDto {
   @ApiProperty({ description: 'Telegram chat ID' })
@@ -40,10 +47,10 @@ export class CreatePlanDto {
   @IsString()
   locationLng?: string; // Will be converted to number
 
-  @ApiPropertyOptional({ description: 'Budget level', enum: ['$', '$$', '$$$'] })
+  @ApiEnumPropertyOptional(BudgetLevel, 'Budget level', BudgetLevel.MEDIUM)
   @IsOptional()
-  @IsString()
-  budget?: string; // '$', '$$', '$$$'
+  @IsEnum(BudgetLevel)
+  budget?: BudgetLevel;
 
   @ApiPropertyOptional({ description: 'Format/type', example: 'dinner' })
   @IsOptional()

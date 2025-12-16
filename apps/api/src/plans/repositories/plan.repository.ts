@@ -11,18 +11,24 @@ export class PlanRepository {
   ) {}
 
   async findById(id: string): Promise<Plan | null> {
-    return this.repository.findOne({
-      where: { id },
-      relations: ['participants', 'votes', 'winningVenue'],
-    });
+    return this.repository
+      .createQueryBuilder('plan')
+      .leftJoinAndSelect('plan.participants', 'participants')
+      .leftJoinAndSelect('plan.votes', 'votes')
+      .leftJoinAndSelect('plan.winningVenue', 'winningVenue')
+      .where('plan.id = :id', { id })
+      .getOne();
   }
 
   async findByTelegramChatId(chatId: number): Promise<Plan[]> {
-    return this.repository.find({
-      where: { telegramChatId: chatId },
-      relations: ['participants', 'votes', 'winningVenue'],
-      order: { createdAt: 'DESC' },
-    });
+    return this.repository
+      .createQueryBuilder('plan')
+      .leftJoinAndSelect('plan.participants', 'participants')
+      .leftJoinAndSelect('plan.votes', 'votes')
+      .leftJoinAndSelect('plan.winningVenue', 'winningVenue')
+      .where('plan.telegram_chat_id = :chatId', { chatId })
+      .orderBy('plan.created_at', 'DESC')
+      .getMany();
   }
 
   async create(plan: Partial<Plan>): Promise<Plan> {
