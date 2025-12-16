@@ -23,7 +23,6 @@ export class UserSavedVenue {
   userId!: string; // Telegram user ID or UUID
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @ManyToOne(() => Venue, { onDelete: 'CASCADE' })

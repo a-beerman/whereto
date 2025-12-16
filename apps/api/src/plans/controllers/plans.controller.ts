@@ -27,7 +27,11 @@ export class PlansController {
 
   // TODO: Extract user ID from Telegram auth token
   private getUserId(req: Request): string {
-    return (req.headers['x-user-id'] as string) || 'default-user-id';
+    const userIdHeader = (req.headers as any)['x-user-id'];
+    if (Array.isArray(userIdHeader)) {
+      return userIdHeader[0] || 'default-user-id';
+    }
+    return userIdHeader || 'default-user-id';
   }
 
   @Post()

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import {
   Client,
   PlaceType1,
-  PlacesNearbySearchRequest,
+  PlacesNearbyRequest,
   PlaceDetailsRequest,
 } from '@googlemaps/google-maps-services-js';
 
@@ -48,7 +48,7 @@ export class GooglePlacesService {
     pagetoken?: string;
   }): Promise<{ results: GooglePlace[]; nextPageToken?: string }> {
     try {
-      const request: PlacesNearbySearchRequest = {
+      const request: PlacesNearbyRequest = {
         params: {
           location: [params.location.lat, params.location.lng],
           radius: params.radius,

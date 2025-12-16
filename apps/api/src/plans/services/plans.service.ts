@@ -99,11 +99,11 @@ export class PlansService {
         // Extract lat/lng
         let lat: number | undefined;
         let lng: number | undefined;
-        if (venueWithOverrides.location) {
-          if (typeof venueWithOverrides.location === 'object') {
-            lng = venueWithOverrides.location.x || venueWithOverrides.location.lng;
-            lat = venueWithOverrides.location.y || venueWithOverrides.location.lat;
-          }
+        // Extract lat/lng from Coordinates
+        if (venueWithOverrides.location && venueWithOverrides.location.coordinates) {
+          const [lngVal, latVal] = venueWithOverrides.location.coordinates;
+          lat = latVal;
+          lng = lngVal;
         }
 
         return {

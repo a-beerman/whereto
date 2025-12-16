@@ -27,6 +27,7 @@
     "@nx/eslint-plugin": "^22.2.3",
     "@nx/node": "^22.2.3",
     "@nx/workspace": "^22.2.3",
+    "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.2",
     "@types/uuid": "^10.0.0",

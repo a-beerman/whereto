@@ -9,7 +9,6 @@ import {
   UseGuards,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiQuery, ApiHeader, ApiParam } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { BookingRequestService } from '../services/booking-request.service';
 import { MerchantStatsService } from '../services/merchant-stats.service';
@@ -18,7 +17,6 @@ import { ConfirmBookingDto } from '../dto/confirm-booking.dto';
 import { RejectBookingDto } from '../dto/reject-booking.dto';
 import { ProposeTimeDto } from '../dto/propose-time.dto';
 
-@ApiTags('Merchant')
 @Controller('merchant')
 @UseGuards(ThrottlerGuard, MerchantAuthGuard)
 export class MerchantController {
@@ -28,16 +26,6 @@ export class MerchantController {
   ) {}
 
   @Get('booking-requests')
-  @ApiOperation({ summary: 'Get booking requests for the authenticated merchant' })
-  @ApiResponse({ status: 200, description: 'List of booking requests' })
-  @ApiQuery({
-    name: 'status',
-    required: false,
-    enum: ['pending', 'confirmed', 'rejected', 'proposed'],
-  })
-  @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiQuery({ name: 'offset', required: false, type: Number })
-  @ApiHeader({ name: 'X-Merchant-User-Id', description: 'Merchant User ID', required: true })
   async getBookingRequests(
     @Req() req: any,
     @Query('status') status?: string,
@@ -64,10 +52,6 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/confirm')
-  @ApiOperation({ summary: 'Confirm a booking request' })
-  @ApiParam({ name: 'id', description: 'Booking request ID' })
-  @ApiResponse({ status: 200, description: 'Booking request confirmed' })
-  @ApiHeader({ name: 'X-Merchant-User-Id', description: 'Merchant User ID', required: true })
   async confirmBooking(@Req() req: any, @Param('id') id: string, @Body() dto: ConfirmBookingDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.confirmBooking(merchantUserId, id, dto);
@@ -83,10 +67,6 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/reject')
-  @ApiOperation({ summary: 'Reject a booking request' })
-  @ApiParam({ name: 'id', description: 'Booking request ID' })
-  @ApiResponse({ status: 200, description: 'Booking request rejected' })
-  @ApiHeader({ name: 'X-Merchant-User-Id', description: 'Merchant User ID', required: true })
   async rejectBooking(@Req() req: any, @Param('id') id: string, @Body() dto: RejectBookingDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.rejectBooking(merchantUserId, id, dto);
@@ -102,10 +82,6 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/propose-time')
-  @ApiOperation({ summary: 'Propose an alternative time for a booking request' })
-  @ApiParam({ name: 'id', description: 'Booking request ID' })
-  @ApiResponse({ status: 200, description: 'Alternative time proposed' })
-  @ApiHeader({ name: 'X-Merchant-User-Id', description: 'Merchant User ID', required: true })
   async proposeTime(@Req() req: any, @Param('id') id: string, @Body() dto: ProposeTimeDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.proposeTime(merchantUserId, id, dto);
@@ -122,11 +98,6 @@ export class MerchantController {
   }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Get statistics for the merchant' })
-  @ApiResponse({ status: 200, description: 'Merchant statistics' })
-  @ApiQuery({ name: 'startDate', required: false, type: String })
-  @ApiQuery({ name: 'endDate', required: false, type: String })
-  @ApiHeader({ name: 'X-Merchant-User-Id', description: 'Merchant User ID', required: true })
   async getStats(
     @Req() req: any,
     @Query('startDate') startDate?: string,

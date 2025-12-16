@@ -8,11 +8,14 @@ import {
   JoinColumn,
   OneToMany,
   Index,
+  ValueTransformer,
 } from 'typeorm';
 import { City } from './city.entity';
 import { VenueSource } from './venue-source.entity';
 import { VenueOverrides } from './venue-overrides.entity';
 import { VenuePartner } from './venue-partner.entity';
+import { UserSavedVenue } from './user-saved-venue.entity';
+import { Coordinates } from '../types/coordinates.type';
 
 @Entity('venues')
 @Index(['cityId'])
@@ -35,23 +38,39 @@ export class Venue {
   @Column({ type: 'text' })
   address!: string;
 
-  // Using PostGIS geography type (can be changed to lat/lng columns for native types)
+  // Using PostgreSQL native POINT type (no PostGIS required)
+  // Stores as POINT(lng, lat) in PostgreSQL
   @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
-    nullable: true, // Make nullable for now, will be required after migration
+    type: 'point',
+    nullable: true,
+    transformer: {
+      // Transform from PostgreSQL point format "(lng,lat)" to Coordinates object
+      from: (value: string | null): Coordinates | null => {
+        if (!value) return null;
+        // PostgreSQL point format: "(lng,lat)" or "(lng, lat)"
+        const match = value.match(/\(([^,]+),\s*([^)]+)\)/);
+        if (!match) return null;
+        const lng = parseFloat(match[1]);
+        const lat = parseFloat(match[2]);
+        return {
+          type: 'Point',
+          coordinates: [lng, lat],
+        };
+      },
+      // Transform from Coordinates object to PostgreSQL point format "(lng,lat)"
+      to: (value: Coordinates | null): string | null => {
+        if (!value || !value.coordinates || value.coordinates.length !== 2) {
+          return null;
+        }
+        const [lng, lat] = value.coordinates;
+        return `(${lng},${lat})`;
+      },
+    },
   })
-  location: any; // PostGIS Point type
-
-  // Alternative: native lat/lng columns (uncomment if not using PostGIS)
-  // @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
-  // lat: number;
-  // @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
-  // lng: number;
+  location?: Coordinates;
 
   @Column({ type: 'jsonb', nullable: true })
-  @Index('idx_venues_categories', { using: 'GIN' })
+  // GIN index created via migration (see migrations/1700000000000-InitialSchema.ts)
   categories?: string[];
 
   @Column({ type: 'decimal', precision: 3, scale: 2, nullable: true })

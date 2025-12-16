@@ -7,8 +7,10 @@ import {
   JoinColumn,
   Index,
   Unique,
+  ValueTransformer,
 } from 'typeorm';
 import { Venue } from './venue.entity';
+import { Coordinates } from '../types/coordinates.type';
 
 @Entity('venue_overrides')
 @Unique(['venueId'])
@@ -18,7 +20,6 @@ export class VenueOverrides {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @OneToOne(() => Venue, { onDelete: 'CASCADE' })
@@ -32,12 +33,30 @@ export class VenueOverrides {
   addressOverride?: string;
 
   @Column({
-    type: 'geography',
-    spatialFeatureType: 'Point',
-    srid: 4326,
+    type: 'point',
     nullable: true,
+    transformer: {
+      from: (value: string | null): Coordinates | null => {
+        if (!value) return null;
+        const match = value.match(/\(([^,]+),\s*([^)]+)\)/);
+        if (!match) return null;
+        const lng = parseFloat(match[1]);
+        const lat = parseFloat(match[2]);
+        return {
+          type: 'Point',
+          coordinates: [lng, lat],
+        };
+      },
+      to: (value: Coordinates | null): string | null => {
+        if (!value || !value.coordinates || value.coordinates.length !== 2) {
+          return null;
+        }
+        const [lng, lat] = value.coordinates;
+        return `(${lng},${lat})`;
+      },
+    },
   })
-  pinOverride?: any; // Override lat/lng
+  pinOverride?: Coordinates; // Override location
 
   @Column({ type: 'jsonb', nullable: true })
   categoryOverrides?: string[];

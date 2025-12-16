@@ -29,7 +29,11 @@ export class VenuesController {
     // Track search event
     this.metricsService.trackProductEvent({
       event: 'search',
-      userId: req.headers['x-user-id'] as string,
+      userId: ((req.headers as any)['x-user-id'] as string | string[] | undefined)
+        ? Array.isArray((req.headers as any)['x-user-id'])
+          ? (req.headers as any)['x-user-id'][0]
+          : (req.headers as any)['x-user-id']
+        : undefined,
       cityId: filters.cityId,
       query: filters.q,
       category: Array.isArray(filters.category) ? filters.category.join(',') : filters.category,
@@ -58,7 +62,11 @@ export class VenuesController {
     // Track open_place event
     this.metricsService.trackProductEvent({
       event: 'open_place',
-      userId: req.headers['x-user-id'] as string,
+      userId: ((req.headers as any)['x-user-id'] as string | string[] | undefined)
+        ? Array.isArray((req.headers as any)['x-user-id'])
+          ? (req.headers as any)['x-user-id'][0]
+          : (req.headers as any)['x-user-id']
+        : undefined,
       venueId: id,
       cityId: venue.cityId,
       timestamp: new Date(),

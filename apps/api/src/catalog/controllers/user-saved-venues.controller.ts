@@ -41,7 +41,11 @@ export class UserSavedVenuesController {
   private getUserId(req: Request): string {
     // For now, use a header or query param
     // In production, extract from Telegram initData
-    return (req.headers['x-user-id'] as string) || 'default-user-id';
+    const userId = (req.headers as any)['x-user-id'];
+    if (Array.isArray(userId)) {
+      return userId[0] || 'default-user-id';
+    }
+    return userId || 'default-user-id';
   }
 
   @Get()

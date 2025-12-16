@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { GooglePlacesService, GooglePlace } from './google-places.service';
 import { Venue } from '../../catalog/entities/venue.entity';
 import { City } from '../../catalog/entities/city.entity';
+import { createCoordinates } from '../../catalog/types/coordinates.type';
 
 @Injectable()
 export class NormalizationService {
@@ -13,11 +14,10 @@ export class NormalizationService {
   normalizeVenue(googlePlace: GooglePlace, city: City): Partial<Venue> {
     const categories = this.googlePlacesService.mapGoogleTypeToCategory(googlePlace.types);
 
-    // Create PostGIS Point from lat/lng
-    const location = {
-      type: 'Point',
-      coordinates: [googlePlace.geometry.location.lng, googlePlace.geometry.location.lat],
-    };
+    // Extract lat/lng from Google Place geometry and create Coordinates
+    const lat = googlePlace.geometry.location.lat;
+    const lng = googlePlace.geometry.location.lng;
+    const location = createCoordinates(lat, lng);
 
     // Normalize opening hours
     const hours = this.normalizeHours(googlePlace.opening_hours);
@@ -29,10 +29,16 @@ export class NormalizationService {
       cityId: city.id,
       name: googlePlace.name,
       address: googlePlace.formatted_address,
-      location: location as any,
+      location,
       categories,
-      rating: googlePlace.rating ? parseFloat(googlePlace.rating.toFixed(2)) : null,
-      ratingCount: googlePlace.user_ratings_total || null,
+      rating:
+        typeof googlePlace.rating === 'number'
+          ? parseFloat(googlePlace.rating.toFixed(2))
+          : undefined,
+      ratingCount:
+        typeof googlePlace.user_ratings_total === 'number'
+          ? googlePlace.user_ratings_total
+          : undefined,
       photoRefs,
       hours,
       status: googlePlace.business_status === 'OPERATIONAL' ? 'active' : 'hidden',

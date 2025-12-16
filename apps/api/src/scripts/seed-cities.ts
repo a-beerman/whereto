@@ -1,24 +1,77 @@
 /**
  * Database seeding script for initial cities
  * Run with: npx ts-node apps/api/src/scripts/seed-cities.ts
+ *
+ * Uses dotenv to load environment variables from .env file
  */
 
 import { DataSource } from 'typeorm';
-import { City } from '../catalog/entities/city.entity';
-import databaseConfig from '../config/database.config';
+import * as dotenv from 'dotenv';
+import * as path from 'path';
+
+// Load environment variables
+dotenv.config({ path: path.join(__dirname, '../../.env') });
+
+// Simple City entity definition for seeding (avoids importing full entity with dependencies)
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
+
+@Entity('cities')
+class CityEntity {
+  @PrimaryGeneratedColumn('uuid')
+  id!: string;
+
+  @Column({ type: 'varchar', length: 255 })
+  name!: string;
+
+  @Column({ type: 'char', length: 2 })
+  countryCode!: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 8 })
+  centerLat!: number;
+
+  @Column({ type: 'decimal', precision: 11, scale: 8 })
+  centerLng!: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  bounds?: any;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  timezone?: string;
+
+  @Column({ type: 'boolean', default: true })
+  isActive!: boolean;
+
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt!: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz' })
+  updatedAt!: Date;
+}
 
 async function seed() {
-  const config = databaseConfig();
   const dataSource = new DataSource({
-    ...config,
-    entities: [City],
+    type: 'postgres',
+    host: process.env.DB_HOST || process.env.DB_HOSTNAME || 'localhost',
+    port: parseInt(process.env.DB_PORT || '5432', 10),
+    username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
+    password: process.env.DB_PASSWORD || '1973',
+    database: process.env.DB_NAME || process.env.DB_DATABASE || 'whereto_catalog',
+    entities: [CityEntity],
+    synchronize: true, // Create table if it doesn't exist (for seeding)
+    logging: ['error', 'warn'],
   });
 
   try {
     await dataSource.initialize();
     console.log('Database connection established');
 
-    const cityRepository = dataSource.getRepository(City);
+    const cityRepository = dataSource.getRepository(CityEntity);
 
     // Check if cities already exist
     const existingCities = await cityRepository.count();

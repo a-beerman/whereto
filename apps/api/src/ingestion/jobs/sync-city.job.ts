@@ -7,6 +7,7 @@ import { NormalizationService } from '../services/normalization.service';
 import { DeduplicationService } from '../services/deduplication.service';
 import { City } from '../../catalog/entities/city.entity';
 import { Venue } from '../../catalog/entities/venue.entity';
+import { PlaceType1 } from '@googlemaps/google-maps-services-js';
 
 export interface SyncMetrics {
   cityId: string;
@@ -62,7 +63,7 @@ export class SyncCityJob {
       this.logger.log(`Starting sync for city: ${city.name} (${cityId})`);
 
       // Search for restaurants, cafes, and bars
-      const placeTypes: Array<'restaurant' | 'cafe' | 'bar'> = ['restaurant', 'cafe', 'bar'];
+      const placeTypes: PlaceType1[] = [PlaceType1.restaurant, PlaceType1.cafe, PlaceType1.bar];
       const allPlaces: Set<string> = new Set(); // Track unique place_ids
 
       for (const type of placeTypes) {

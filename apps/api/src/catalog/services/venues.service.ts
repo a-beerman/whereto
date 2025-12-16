@@ -3,6 +3,8 @@ import { VenueRepository, VenueFilters } from '../repositories/venue.repository'
 import { VenueResponseDto } from '../dto/venue-response.dto';
 import { PhotoService } from './photo.service';
 import { HoursService } from './hours.service';
+import { haversineDistance } from '../../utils/geo';
+import { extractLatLng } from '../types/coordinates.type';
 
 @Injectable()
 export class VenuesService {
@@ -17,8 +19,8 @@ export class VenuesService {
     total: number;
     nextCursor?: string;
   }> {
-    // Remove openNow from repository search (will filter in service layer)
-    const { openNow, ...repoFilters } = filters;
+    // Remove openNow and sort from repository search (will handle in service layer)
+    const { openNow, sort, ...repoFilters } = filters;
     const result = await this.venueRepository.search(repoFilters);
 
     // Apply overrides to each venue
@@ -26,6 +28,29 @@ export class VenuesService {
       const overrides = venue.overrides?.[0]; // Get first override if exists
       return this.venueRepository.applyOverrides(venue, overrides);
     });
+
+    // Filter by radius using Haversine distance (if radius filter was used)
+    if (filters.lat && filters.lng && filters.radiusMeters) {
+      venuesWithOverrides = venuesWithOverrides.filter((venue) => {
+        const coords = extractLatLng(venue.location);
+        if (!coords) return false;
+        const distance = haversineDistance(filters.lat!, filters.lng!, coords.lat, coords.lng);
+        return distance <= filters.radiusMeters!;
+      });
+    }
+
+    // Sort by distance if requested
+    if (sort === 'distance' && filters.lat && filters.lng) {
+      venuesWithOverrides = venuesWithOverrides
+        .map((venue) => {
+          const coords = extractLatLng(venue.location);
+          if (!coords) return { venue, distance: Infinity };
+          const distance = haversineDistance(filters.lat!, filters.lng!, coords.lat, coords.lng);
+          return { venue, distance };
+        })
+        .sort((a, b) => a.distance - b.distance)
+        .map((item) => item.venue);
+    }
 
     // Filter by openNow if requested
     if (openNow) {
@@ -54,19 +79,10 @@ export class VenuesService {
   }
 
   private toResponseDto(venue: any): VenueResponseDto {
-    // Extract lat/lng from PostGIS location if needed
-    let lat: number | undefined;
-    let lng: number | undefined;
-
-    if (venue.location) {
-      // If location is a PostGIS Point, extract coordinates
-      // This depends on how TypeORM returns PostGIS data
-      // For now, assume it's stored as { x: lng, y: lat } or similar
-      if (typeof venue.location === 'object') {
-        lng = venue.location.x || venue.location.lng;
-        lat = venue.location.y || venue.location.lat;
-      }
-    }
+    // Extract lat/lng from Coordinates
+    const coords = extractLatLng(venue.location);
+    const lat = coords?.lat;
+    const lng = coords?.lng;
 
     // Convert photo references to URLs
     const photoUrls = venue.photoRefs ? this.photoService.getPhotoUrls(venue.photoRefs) : [];

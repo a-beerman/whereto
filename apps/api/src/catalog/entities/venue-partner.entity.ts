@@ -14,14 +14,13 @@ import { Venue } from './venue.entity';
 @Entity('venue_partners')
 @Unique(['venueId'])
 @Index(['venueId'])
-@Index(['isActive'], { where: 'is_active = true' })
+@Index(['isActive'], { where: '"isActive" = true' })
 @Index(['merchantUserId'])
 export class VenuePartner {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @ManyToOne(() => Venue, { onDelete: 'CASCADE' })

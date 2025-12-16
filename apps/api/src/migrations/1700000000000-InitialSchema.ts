@@ -4,12 +4,11 @@ export class InitialSchema1700000000000 implements MigrationInterface {
   name = 'InitialSchema1700000000000';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Enable PostGIS extension (comment out if using native types)
-    await queryRunner.query(`CREATE EXTENSION IF NOT EXISTS postgis;`);
+    // Using native PostgreSQL types (no PostGIS required)
 
     // Cities table
     await queryRunner.query(`
-      CREATE TABLE cities (
+      CREATE TABLE IF NOT EXISTS cities (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
         country_code CHAR(2) NOT NULL,
@@ -24,21 +23,21 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_cities_active ON cities(is_active) WHERE is_active = true;
+      CREATE INDEX IF NOT EXISTS idx_cities_active ON cities(is_active) WHERE is_active = true;
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_cities_location ON cities USING GIST(ST_MakePoint(center_lng, center_lat));
+      CREATE INDEX IF NOT EXISTS idx_cities_location ON cities(center_lat, center_lng);
     `);
 
     // Venues table
     await queryRunner.query(`
-      CREATE TABLE venues (
+      CREATE TABLE IF NOT EXISTS venues (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         city_id UUID NOT NULL REFERENCES cities(id) ON DELETE CASCADE,
         name VARCHAR(255) NOT NULL,
         address TEXT NOT NULL,
-        location GEOGRAPHY(POINT, 4326),
+        location POINT,
         categories JSONB,
         rating DECIMAL(3, 2),
         rating_count INTEGER,
@@ -51,24 +50,24 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_venues_city ON venues(city_id);
+      CREATE INDEX IF NOT EXISTS idx_venues_city ON venues(city_id);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_venues_status ON venues(status) WHERE status = 'active';
+      CREATE INDEX IF NOT EXISTS idx_venues_status ON venues(status) WHERE status = 'active';
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_venues_location ON venues USING GIST(location);
+      CREATE INDEX IF NOT EXISTS idx_venues_location ON venues USING GIST(location);
     `);
 
     await queryRunner.query(`
-      CREATE INDEX idx_venues_categories ON venues USING GIN(categories);
+      CREATE INDEX IF NOT EXISTS idx_venues_categories ON venues USING GIN(categories);
     `);
 
     // Venue Sources table
     await queryRunner.query(`
-      CREATE TABLE venue_sources (
+      CREATE TABLE IF NOT EXISTS venue_sources (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
         source VARCHAR(50) NOT NULL,
@@ -91,12 +90,12 @@ export class InitialSchema1700000000000 implements MigrationInterface {
 
     // Venue Overrides table
     await queryRunner.query(`
-      CREATE TABLE venue_overrides (
+      CREATE TABLE IF NOT EXISTS venue_overrides (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
         name_override VARCHAR(255),
         address_override TEXT,
-        pin_override GEOGRAPHY(POINT, 4326),
+        pin_override POINT,
         category_overrides JSONB,
         hidden BOOLEAN DEFAULT false,
         note TEXT,
@@ -112,7 +111,7 @@ export class InitialSchema1700000000000 implements MigrationInterface {
 
     // Venue Partners table
     await queryRunner.query(`
-      CREATE TABLE venue_partners (
+      CREATE TABLE IF NOT EXISTS venue_partners (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
         is_active BOOLEAN DEFAULT true,
@@ -140,7 +139,7 @@ export class InitialSchema1700000000000 implements MigrationInterface {
 
     // User Saved Venues table
     await queryRunner.query(`
-      CREATE TABLE user_saved_venues (
+      CREATE TABLE IF NOT EXISTS user_saved_venues (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         user_id VARCHAR(255) NOT NULL,
         venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
@@ -165,6 +164,5 @@ export class InitialSchema1700000000000 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE IF EXISTS venue_sources;`);
     await queryRunner.query(`DROP TABLE IF EXISTS venues;`);
     await queryRunner.query(`DROP TABLE IF EXISTS cities;`);
-    // Note: We don't drop PostGIS extension as it might be used by other databases
   }
 }

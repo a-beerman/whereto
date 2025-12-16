@@ -21,7 +21,13 @@ import { HealthController } from './common/controllers/health.controller';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => configService.get('database'),
+      useFactory: (configService: ConfigService) => {
+        const config = configService.get('database');
+        if (!config) {
+          throw new Error('Database configuration not found');
+        }
+        return config;
+      },
       inject: [ConfigService],
     }),
     ThrottlerModule.forRoot([

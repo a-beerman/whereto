@@ -22,10 +22,16 @@ export class BookingRequestService {
     merchantUserId: string,
     filters: { status?: string; limit?: number; offset?: number } = {},
   ): Promise<{ requests: BookingRequest[]; total: number; pending: number }> {
-    const { requests, total } = await this.bookingRequestRepository.findByMerchant(
-      merchantUserId,
-      filters,
-    );
+    const { requests, total } = await this.bookingRequestRepository.findByMerchant(merchantUserId, {
+      ...filters,
+      status: filters.status as
+        | 'pending'
+        | 'confirmed'
+        | 'rejected'
+        | 'proposed'
+        | 'cancelled'
+        | undefined,
+    });
 
     const pending = await this.bookingRequestRepository.countByStatus(merchantUserId, 'pending');
 

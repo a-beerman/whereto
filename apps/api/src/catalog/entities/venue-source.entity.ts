@@ -20,7 +20,6 @@ export class VenueSource {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @ManyToOne(() => Venue, { onDelete: 'CASCADE' })

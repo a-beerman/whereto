@@ -3,6 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { Venue } from '../entities/venue.entity';
 import { VenueOverrides } from '../entities/venue-overrides.entity';
+import { calculateBoundingBox, haversineDistance } from '../../utils/geo';
+import { extractLatLng } from '../types/coordinates.type';
 
 export interface VenueFilters {
   cityId?: string;
@@ -87,20 +89,26 @@ export class VenueRepository {
       });
     }
 
-    // Geo filter - bbox
+    // Geo filter - bbox (using PostgreSQL POINT type)
     if (filters.bbox) {
       const [minLat, minLng, maxLat, maxLng] = filters.bbox.split(',').map(Number);
+      // PostgreSQL POINT format: (x, y) = (lng, lat)
+      // Access coordinates using (point).x for lng and (point).y for lat
       queryBuilder.andWhere(
-        'ST_Within(venue.location, ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326))',
-        { minLng, minLat, maxLng, maxLat },
+        'venue.location IS NOT NULL AND (venue.location).x BETWEEN :minLng AND :maxLng AND (venue.location).y BETWEEN :minLat AND :maxLat',
+        { minLng, maxLng, minLat, maxLat },
       );
     }
 
-    // Geo filter - radius
+    // Geo filter - radius (using PostgreSQL distance operator <@>)
+    // PostgreSQL <@> operator calculates distance in degrees (1 degree ≈ 111km)
+    // We'll do final filtering in service layer for accuracy
     if (filters.lat && filters.lng && filters.radiusMeters) {
+      const bbox = calculateBoundingBox(filters.lat, filters.lng, filters.radiusMeters);
+      // Pre-filter with bounding box using POINT coordinates
       queryBuilder.andWhere(
-        'ST_DWithin(venue.location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :radius)',
-        { lat: filters.lat, lng: filters.lng, radius: filters.radiusMeters },
+        'venue.location IS NOT NULL AND (venue.location).x BETWEEN :minLng AND :maxLng AND (venue.location).y BETWEEN :minLat AND :maxLat',
+        { minLng: bbox.minLng, maxLng: bbox.maxLng, minLat: bbox.minLat, maxLat: bbox.maxLat },
       );
     }
 
@@ -115,16 +123,8 @@ export class VenueRepository {
     // For MVP, we'll filter in the service layer after fetching
 
     // Sorting
-    if (filters.sort === 'distance' && filters.lat && filters.lng) {
-      queryBuilder
-        .addSelect(
-          'ST_Distance(venue.location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography)',
-          'distance',
-        )
-        .setParameter('lat', filters.lat)
-        .setParameter('lng', filters.lng)
-        .orderBy('distance', 'ASC');
-    } else if (filters.sort === 'rating') {
+    // Note: Distance sorting will be done in service layer after calculating Haversine distances
+    if (filters.sort === 'rating') {
       queryBuilder.orderBy('venue.rating', 'DESC', 'NULLS LAST');
     } else if (filters.sort === 'name') {
       queryBuilder.orderBy('venue.name', 'ASC');

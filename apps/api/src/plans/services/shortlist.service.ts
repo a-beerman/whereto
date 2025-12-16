@@ -73,20 +73,13 @@ export class ShortlistService {
   }
 
   /**
-   * Extract lat/lng from venue location (PostGIS or native)
+   * Extract lat/lng from venue location (Coordinates)
    */
   private getVenuePoint(venue: Venue): Point | null {
-    if (venue.location) {
-      if (typeof venue.location === 'object') {
-        return {
-          lat: venue.location.y || venue.location.lat || 0,
-          lng: venue.location.x || venue.location.lng || 0,
-        };
-      }
-    }
-    // If using native lat/lng columns
-    if ((venue as any).lat && (venue as any).lng) {
-      return { lat: (venue as any).lat, lng: (venue as any).lng };
+    // Using Coordinates from location field
+    if (venue.location && venue.location.coordinates && venue.location.coordinates.length === 2) {
+      const [lng, lat] = venue.location.coordinates;
+      return { lat, lng };
     }
     return null;
   }

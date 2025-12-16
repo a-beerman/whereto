@@ -1,32 +1,26 @@
 # Database Schema & Migrations Guide
 
-This document describes the database schema, migration strategy, and PostGIS usage for the WhereTo catalog.
+This document describes the database schema, migration strategy, and geospatial queries for the WhereTo catalog.
 
 > **Reference**: This schema implements the data model specified in [`docs/FINAL-SPEC.md`](FINAL-SPEC.md) Section 4. For the canonical implementation-ready specification, see FINAL-SPEC.md.
 
 ## Schema Overview
 
-The catalog database uses PostgreSQL. For geospatial queries, we have two options:
+The catalog database uses PostgreSQL with **native lat/lng columns** (no PostGIS extension required).
 
-**Option A: PostGIS Extension (Recommended)**
-- Accurate geographic distance calculations (meters/km on Earth's surface)
-- Spatial indexing (GIST) for fast radius and bounding box queries
-- Clean SQL with `ST_DWithin`, `ST_Distance`, etc.
-- Requires `CREATE EXTENSION postgis;`
+**Geospatial Approach:**
 
-**Option B: Native PostgreSQL Types (Simpler for MVP)**
 - Store `lat DECIMAL(10,8)`, `lng DECIMAL(11,8)` columns
-- Calculate distances using Haversine formula in application code
+- Calculate distances using Haversine formula in application code (see `apps/api/src/utils/geo.ts`)
 - Use bounding box pre-filtering in SQL (simple WHERE clauses)
-- No extension required, simpler deployment
+- No extension required, simpler deployment and setup
 
-**Recommendation**: For MVP, Option B is acceptable if you're only searching within a single city (small area). For production with multiple cities or larger search areas, Option A (PostGIS) is recommended for accuracy and performance.
-
-The schema below shows **Option A (PostGIS)**. See "Alternative: Native Types" section for Option B.
+This approach is sufficient for MVP and city-level searches. For very large-scale production with complex spatial queries, PostGIS could be added later if needed.
 
 ### Core Tables
 
 **Catalog Domain:**
+
 - `cities` - City/location catalog
 - `venues` - Canonical venue records
 - `venue_sources` - Links venues to external sources (Google Places)
@@ -35,12 +29,14 @@ The schema below shows **Option A (PostGIS)**. See "Alternative: Native Types" s
 - `user_saved_venues` - User favorites (optional for Phase 1)
 
 **Group Planning Domain:**
+
 - `plans` - Group planning plans
 - `participants` - Plan participants and preferences
 - `votes` - Voting sessions for plans
 - `vote_casts` - Individual votes cast by participants
 
 **Merchant/Booking Domain:**
+
 - `booking_requests` - Booking requests from group plans
 
 ## Entity Definitions
@@ -62,7 +58,7 @@ CREATE TABLE cities (
 );
 
 CREATE INDEX idx_cities_active ON cities(is_active) WHERE is_active = true;
-CREATE INDEX idx_cities_location ON cities USING GIST(ST_MakePoint(center_lng, center_lat));
+CREATE INDEX idx_cities_location ON cities(center_lat, center_lng);
 ```
 
 ### Venues Table
@@ -73,7 +69,8 @@ CREATE TABLE venues (
   city_id UUID NOT NULL REFERENCES cities(id) ON DELETE CASCADE,
   name VARCHAR(255) NOT NULL,
   address TEXT NOT NULL,
-  location GEOGRAPHY(POINT, 4326) NOT NULL, -- PostGIS geography type (see "Alternative: Native Types" section for lat/lng columns)
+  lat DECIMAL(10, 8), -- Latitude
+  lng DECIMAL(11, 8), -- Longitude
   categories JSONB, -- Array of category strings
   rating DECIMAL(3, 2), -- 0.00 to 5.00
   rating_count INTEGER,
@@ -87,9 +84,8 @@ CREATE TABLE venues (
 -- Indexes
 CREATE INDEX idx_venues_city ON venues(city_id);
 CREATE INDEX idx_venues_status ON venues(status) WHERE status = 'active';
-CREATE INDEX idx_venues_location ON venues USING GIST(location); -- Critical for geo queries
+CREATE INDEX idx_venues_location ON venues(lat, lng); -- Composite index for bounding box queries
 CREATE INDEX idx_venues_categories ON venues USING GIN(categories); -- For category filtering
-CREATE INDEX idx_venues_name_trgm ON venues USING GIN(name gin_trgm_ops); -- For text search (requires pg_trgm)
 ```
 
 ### Venue Sources Table
@@ -119,7 +115,8 @@ CREATE TABLE venue_overrides (
   venue_id UUID NOT NULL REFERENCES venues(id) ON DELETE CASCADE,
   name_override VARCHAR(255),
   address_override TEXT,
-  pin_override GEOGRAPHY(POINT, 4326), -- Override lat/lng
+  pin_lat_override DECIMAL(10, 8), -- Override latitude
+  pin_lng_override DECIMAL(11, 8), -- Override longitude
   category_overrides JSONB,
   hidden BOOLEAN DEFAULT false,
   note TEXT, -- Editor note
@@ -370,7 +367,7 @@ export class AddVenueOverrides1234567890 implements MigrationInterface {
         UNIQUE(venue_id)
       );
     `);
-    
+
     await queryRunner.query(`
       CREATE INDEX idx_venue_overrides_venue ON venue_overrides(venue_id);
     `);
@@ -382,137 +379,18 @@ export class AddVenueOverrides1234567890 implements MigrationInterface {
 }
 ```
 
-## PostGIS Usage (Option A)
+## Geospatial Queries
 
-### Enabling PostGIS
+We use native PostgreSQL lat/lng columns with Haversine distance calculations in application code.
 
-```sql
-CREATE EXTENSION IF NOT EXISTS postgis;
-CREATE EXTENSION IF NOT EXISTS postgis_topology;
-```
+### Utility Functions
 
-**Note**: If you prefer not to use PostGIS, see "Alternative: Native Types" section below.
+See `apps/api/src/utils/geo.ts` for:
 
-### Common Geo Queries
+- `haversineDistance()` - Calculate distance between two points in meters
+- `calculateBoundingBox()` - Calculate bounding box for radius queries
 
-#### Find Venues Within Radius
-
-```typescript
-// Using TypeORM QueryBuilder
-const venues = await venueRepository
-  .createQueryBuilder('venue')
-  .where(
-    'ST_DWithin(venue.location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, :radius)',
-    { lat, lng, radius: radiusMeters },
-  )
-  .andWhere('venue.status = :status', { status: 'active' })
-  .getMany();
-```
-
-#### Find Venues in Bounding Box
-
-```typescript
-const venues = await venueRepository
-  .createQueryBuilder('venue')
-  .where(
-    'ST_Within(venue.location, ST_MakeEnvelope(:minLng, :minLat, :maxLng, :maxLat, 4326))',
-    { minLng, minLat, maxLng, maxLat },
-  )
-  .getMany();
-```
-
-#### Calculate Distance
-
-```typescript
-const venues = await venueRepository
-  .createQueryBuilder('venue')
-  .addSelect(
-    'ST_Distance(venue.location, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography)',
-    'distance',
-  )
-  .setParameter('lat', userLat)
-  .setParameter('lng', userLng)
-  .orderBy('distance', 'ASC')
-  .getMany();
-```
-
-### Indexing Strategy
-
-- **GIST indexes** on geography/geometry columns for spatial queries
-- **GIN indexes** on JSONB columns for array/object queries
-- **B-tree indexes** on foreign keys and frequently filtered columns
-- **Partial indexes** for filtered queries (e.g., `WHERE status = 'active'`)
-
-## Data Seeding
-
-### Seed Scripts
-
-Seed scripts populate initial data (cities, test venues, etc.):
-
-```typescript
-// scripts/seed.ts
-async function seed() {
-  // Seed cities
-  const city = await cityRepository.save({
-    name: 'Kishinev',
-    countryCode: 'MD',
-    centerLat: 47.0104,
-    centerLng: 28.8638,
-    timezone: 'Europe/Chisinau',
-    isActive: true,
-  });
-  
-  // Seed test venues
-  // ...
-}
-```
-
-Run seeds:
-
-```bash
-npm run seed
-```
-
-## Performance Considerations
-
-1. **Geo Indexes**: Always have GIST index on location columns
-2. **Query Optimization**: Use `EXPLAIN ANALYZE` to optimize slow queries
-3. **Connection Pooling**: Configure appropriate pool size
-4. **Read Replicas**: Consider read replicas for high read load
-5. **Caching**: Cache frequently accessed data (cities, popular venues)
-
-## Alternative: Native Types (Option B - Simpler for MVP)
-
-If you prefer not to use PostGIS, you can use simple lat/lng columns:
-
-### Venues Table (Native Types)
-
-```sql
-CREATE TABLE venues (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  city_id UUID NOT NULL REFERENCES cities(id) ON DELETE CASCADE,
-  name VARCHAR(255) NOT NULL,
-  address TEXT NOT NULL,
-  lat DECIMAL(10, 8) NOT NULL,
-  lng DECIMAL(11, 8) NOT NULL,
-  categories JSONB,
-  rating DECIMAL(3, 2),
-  rating_count INTEGER,
-  photo_refs JSONB,
-  hours JSONB,
-  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'hidden', 'duplicate')),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Indexes
-CREATE INDEX idx_venues_city ON venues(city_id);
-CREATE INDEX idx_venues_status ON venues(status) WHERE status = 'active';
-CREATE INDEX idx_venues_location ON venues(lat, lng); -- Composite index for bounding box queries
-CREATE INDEX idx_venues_categories ON venues USING GIN(categories);
-```
-
-### Geo Queries (Native Types)
+### Geo Queries
 
 #### Find Venues in Bounding Box
 
@@ -530,23 +408,15 @@ const venues = await venueRepository
 
 ```typescript
 // utils/geo.ts
-function haversineDistance(
-  lat1: number,
-  lng1: number,
-  lat2: number,
-  lng2: number,
-): number {
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000; // Earth radius in meters
   const dLat = toRadians(lat2 - lat1);
   const dLng = toRadians(lng2 - lng1);
-  
+
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRadians(lat1)) *
-      Math.cos(toRadians(lat2)) *
-      Math.sin(dLng / 2) *
-      Math.sin(dLng / 2);
-  
+    Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c; // Distance in meters
 }
@@ -556,16 +426,12 @@ function toRadians(degrees: number): number {
 }
 
 // Find venues within radius (two-step: bounding box filter, then distance filter)
-async function findNearby(
-  lat: number,
-  lng: number,
-  radiusMeters: number,
-): Promise<Venue[]> {
+async function findNearby(lat: number, lng: number, radiusMeters: number): Promise<Venue[]> {
   // Step 1: Rough bounding box filter (faster)
   // Approximate: 1 degree lat ≈ 111km, 1 degree lng ≈ 111km * cos(lat)
   const latDelta = radiusMeters / 111000;
   const lngDelta = radiusMeters / (111000 * Math.cos(toRadians(lat)));
-  
+
   const candidates = await venueRepository
     .createQueryBuilder('venue')
     .where('venue.lat BETWEEN :minLat AND :maxLat', {
@@ -578,9 +444,9 @@ async function findNearby(
     })
     .andWhere('venue.status = :status', { status: 'active' })
     .getMany();
-  
+
   // Step 2: Accurate distance filter
-  return candidates.filter(venue => {
+  return candidates.filter((venue) => {
     const distance = haversineDistance(lat, lng, venue.lat, venue.lng);
     return distance <= radiusMeters;
   });
@@ -597,9 +463,9 @@ async function findVenuesSortedByDistance(
   const venues = await venueRepository.find({
     where: { status: 'active' },
   });
-  
+
   return venues
-    .map(venue => ({
+    .map((venue) => ({
       ...venue,
       distance: haversineDistance(lat, lng, venue.lat, venue.lng),
     }))
@@ -607,17 +473,51 @@ async function findVenuesSortedByDistance(
 }
 ```
 
-### Trade-offs: PostGIS vs Native Types
+### Indexing Strategy
 
-| Feature | PostGIS | Native Types |
-|---------|---------|--------------|
-| **Accuracy** | ✅ Accurate geographic distance | ⚠️ Accurate (with Haversine) but slower |
-| **Performance** | ✅ Fast with spatial indexes | ⚠️ Slower (application-level filtering) |
-| **Setup** | ⚠️ Requires extension | ✅ No extension needed |
-| **Query Complexity** | ✅ Clean SQL | ⚠️ Two-step (bounding box + filter) |
-| **Best For** | Production, multiple cities | MVP, single city, simple deployment |
+- **Composite indexes** on (lat, lng) for bounding box queries
+- **GIN indexes** on JSONB columns for array/object queries
+- **B-tree indexes** on foreign keys and frequently filtered columns
+- **Partial indexes** for filtered queries (e.g., `WHERE status = 'active'`)
 
-**Recommendation for MVP**: If you're only supporting one city (Kishinev) and want simpler deployment, native types are acceptable. For production with multiple cities or larger search areas, PostGIS is recommended.
+## Data Seeding
+
+### Seed Scripts
+
+Seed scripts populate initial data (cities, test venues, etc.):
+
+```typescript
+// scripts/seed-cities.ts
+async function seed() {
+  // Seed cities
+  const city = await cityRepository.save({
+    name: 'Chișinău',
+    countryCode: 'MD',
+    centerLat: 47.0104,
+    centerLng: 28.8638,
+    timezone: 'Europe/Chisinau',
+    isActive: true,
+  });
+
+  // Seed test venues
+  // ...
+}
+```
+
+Run seeds:
+
+```bash
+npx ts-node apps/api/src/scripts/seed-cities.ts
+```
+
+## Performance Considerations
+
+1. **Composite Indexes**: Use (lat, lng) composite index for bounding box queries
+2. **Query Optimization**: Use `EXPLAIN ANALYZE` to optimize slow queries
+3. **Connection Pooling**: Configure appropriate pool size
+4. **Read Replicas**: Consider read replicas for high read load
+5. **Caching**: Cache frequently accessed data (cities, popular venues)
+6. **Bounding Box Pre-filtering**: Always use bounding box in SQL before applying Haversine distance filter
 
 ## Backup & Recovery
 
@@ -640,6 +540,5 @@ pg_restore -h localhost -U postgres -d whereto_catalog backup.dump
 ## References
 
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [PostGIS Documentation](https://postgis.net/documentation/)
 - [TypeORM Migrations](https://typeorm.io/migrations)
-
+- [Haversine Formula](https://en.wikipedia.org/wiki/Haversine_formula)

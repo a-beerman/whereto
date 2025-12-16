@@ -15,9 +15,10 @@
       }
     },
     "serve": {
-      "executor": "@nx/node:serve",
+      "executor": "nx:run-commands",
       "options": {
-        "buildTarget": "api:build"
+        "command": "ts-node apps/api/src/main.ts",
+        "watch": true
       }
     },
     "lint": {
