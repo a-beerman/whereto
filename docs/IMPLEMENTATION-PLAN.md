@@ -220,28 +220,52 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ---
 
-### Phase 7: Merchant Bot & Booking System ⏸️ NOT STARTED
+### Phase 7: Merchant Bot & Booking System ✅ COMPLETED
 
-**Status**: ⏸️ Not Started
+**Status**: ✅ Complete
 
 **Deliverables**:
 
-- [ ] Merchant bot setup
-- [ ] Booking request endpoints
-- [ ] Merchant authentication
-- [ ] Booking confirmation/rejection flow
-- [ ] Alternative time proposal
-- [ ] SLA tracking
-- [ ] Merchant statistics
+- [x] Booking request endpoints (API complete)
+- [x] Merchant authentication (MerchantAuthGuard)
+- [x] Booking confirmation/rejection flow
+- [x] Alternative time proposal
+- [x] SLA tracking (response time tracking)
+- [x] Merchant statistics
+- [ ] Merchant bot setup (can be added later as separate bot or integrated into main bot)
 
 **Epic**: Partner system (from FINAL-SPEC.md)
 
-**Files to Create**:
+**Files Created**:
 
-- `apps/api/src/merchant/services/*`
-- `apps/api/src/merchant/controllers/*`
-- `apps/api/src/merchant/repositories/*`
-- `apps/merchant-bot/` (or separate bot)
+- `apps/api/src/merchant/repositories/booking-request.repository.ts`
+- `apps/api/src/merchant/repositories/venue-partner.repository.ts`
+- `apps/api/src/merchant/services/booking-request.service.ts`
+- `apps/api/src/merchant/services/merchant-stats.service.ts`
+- `apps/api/src/merchant/controllers/merchant.controller.ts`
+- `apps/api/src/merchant/guards/merchant-auth.guard.ts`
+- `apps/api/src/merchant/dto/*` (confirm-booking.dto.ts, reject-booking.dto.ts, propose-time.dto.ts, create-booking-request.dto.ts)
+- `apps/api/src/merchant/merchant.module.ts`
+- `apps/api/src/migrations/1700000002000-BookingRequestsSchema.ts`
+
+**Files Modified**:
+
+- `apps/api/src/plans/controllers/plans.controller.ts` - Added booking request creation endpoint
+- `apps/api/src/plans/plans.module.ts` - Imported MerchantModule
+- `apps/api/src/app.module.ts` - Registered MerchantModule
+
+**Endpoints Implemented**:
+
+- `GET /api/v1/merchant/booking-requests` - List booking requests for merchant
+- `POST /api/v1/merchant/booking-requests/:id/confirm` - Confirm booking
+- `POST /api/v1/merchant/booking-requests/:id/reject` - Reject booking
+- `POST /api/v1/merchant/booking-requests/:id/propose-time` - Propose alternative time
+- `GET /api/v1/merchant/stats` - Merchant statistics
+- `POST /api/v1/plans/:id/booking-request` - Create booking request (in PlansController)
+
+**Remaining**:
+
+- [ ] Merchant bot (Telegram bot for merchants to manage bookings) - can be Phase 7.5 or separate
 
 ---
 
@@ -295,18 +319,17 @@ This document tracks the technical implementation progress for the WhereTo MVP.
 
 ## Current Progress Summary
 
-**Completed**: 6 phases (Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6)
+**Completed**: 7 phases (Phase 0, Phase 1, Phase 2, Phase 3, Phase 4, Phase 5, Phase 6, Phase 7)
 **In Progress**: 0 phases
-**Not Started**: 4 phases (Phase 7, 8, 9, 10)
+**Not Started**: 3 phases (Phase 8, 9, 10)
 
-**Overall Progress**: ~60% complete
+**Overall Progress**: ~70% complete
 
 ## Next Steps
 
-1. **Complete Phase 3**: Add missing catalog API features (photo URLs, open hours filtering, caching)
-2. **Start Phase 5**: Begin Telegram bot implementation (Discovery Flow)
-3. **Start Phase 6**: Implement Telegram bot group planning flow
-4. **Start Phase 7**: Merchant bot and booking system
+1. **Start Phase 8**: Observability & Quality (metrics, logging, error tracking)
+2. **Start Phase 9**: Testing & Polish (unit tests, integration tests, E2E tests)
+3. **Start Phase 10**: Deployment Preparation (CI/CD, Docker, production config)
 
 ## Notes
 

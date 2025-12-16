@@ -1,4 +1,13 @@
-import { Controller, Get, Post, Param, Body, Request, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Param,
+  Body,
+  Request,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PlansService } from '../services/plans.service';
 import { CreatePlanDto } from '../dto/create-plan.dto';
 import { JoinPlanDto } from '../dto/join-plan.dto';
@@ -92,7 +101,7 @@ export class PlansController {
     }
 
     if (plan.status !== 'closed') {
-      throw new NotFoundException('Booking requests can only be created for closed plans');
+      throw new BadRequestException('Booking requests can only be created for closed plans');
     }
 
     const bookingRequest = await this.bookingRequestService.createBookingRequest({
