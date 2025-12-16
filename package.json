@@ -16,7 +16,10 @@
     "lint": "nx lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "generate:api-client": "ts-node scripts/generate-api-client.ts",
+    "generate:api-client:local": "ts-node scripts/generate-api-client.ts --local",
+    "swagger:export": "curl -o openapi.json http://localhost:3000/api/docs-json"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
@@ -39,6 +42,7 @@
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
     "nx": "^22.2.3",
+    "openapi-generator-cli": "^2.15.0",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
@@ -59,6 +63,7 @@
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
     "@nestjs/platform-express": "^11.1.9",
+    "@nestjs/swagger": "^8.0.7",
     "@nestjs/terminus": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
     "@telegraf/types": "^9.2.1",

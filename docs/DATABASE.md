@@ -319,6 +319,15 @@ See `apps/api/src/merchant/entities/` for merchant/booking entities (VenuePartne
 
 We use TypeORM migrations for schema versioning. Migrations are stored in `apps/api/migrations/`.
 
+**⚠️ CRITICAL: Database Synchronization**
+
+TypeORM's `synchronize` option is **NEVER enabled in production**. It is automatically disabled when:
+
+- `NODE_ENV=production`, OR
+- `DB_SYNCHRONIZE=false` or `DB_SYNCHRONIZE=0`
+
+In production, always use migrations to manage schema changes. See `apps/api/src/config/database.config.ts` for the implementation.
+
 ### Creating Migrations
 
 ```bash

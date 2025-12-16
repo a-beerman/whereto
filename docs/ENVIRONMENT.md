@@ -42,10 +42,14 @@ cp apps/miniapp/.env.example apps/miniapp/.env
 # Database
 DB_HOST=localhost
 DB_PORT=5432
-DB_USER=whereto
-DB_PASSWORD=whereto
+DB_USER=postgres
+DB_PASSWORD=1973
 DB_NAME=whereto_catalog
 DB_SSL=false
+
+# Database Synchronization (WARNING: Never enable in production!)
+# Set to 'false' to explicitly disable, or leave unset to auto-disable in production
+# DB_SYNCHRONIZE=false
 
 # Connection Pool
 DB_POOL_MIN=2
@@ -166,6 +170,7 @@ CORS_ORIGIN=https://staging.whereto.app
 NODE_ENV=production
 LOG_LEVEL=warn
 DB_SSL=true
+DB_SYNCHRONIZE=false  # CRITICAL: Must be false in production (auto-disabled if NODE_ENV=production)
 CORS_ORIGIN=https://whereto.app
 ```
 
@@ -355,6 +360,7 @@ Solution: Ensure numeric values are valid numbers, not strings.
 ### Environment Not Loading
 
 Check:
+
 1. `.env` file exists in correct location
 2. File is not gitignored (should be)
 3. Application is reading from correct path
@@ -375,4 +381,3 @@ Check:
 - [NestJS Configuration](https://docs.nestjs.com/techniques/configuration)
 - [Angular Environments](https://angular.io/guide/build#configuring-application-environments)
 - [12-Factor App: Config](https://12factor.net/config)
-

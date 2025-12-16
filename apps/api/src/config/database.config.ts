@@ -13,7 +13,12 @@ export default registerAs(
     ssl: process.env.DB_SSL === 'true',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
-    synchronize: process.env.NODE_ENV === 'development', // false in production
+    // CRITICAL: synchronize must NEVER be true in production
+    // It will auto-disable if NODE_ENV=production OR if DB_SYNCHRONIZE=false
+    synchronize:
+      process.env.NODE_ENV !== 'production' &&
+      process.env.DB_SYNCHRONIZE !== 'false' &&
+      process.env.DB_SYNCHRONIZE !== '0',
     logging: process.env.NODE_ENV === 'development',
     extra: {
       max: parseInt(process.env.DB_POOL_MAX || '10', 10),
