@@ -29,7 +29,7 @@ export class Venue {
   cityId!: string;
 
   @ManyToOne(() => City, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'cityId' })
+  @JoinColumn()
   city!: City;
 
   @Column({ type: 'varchar', length: 255 })
@@ -45,17 +45,31 @@ export class Venue {
     nullable: true,
     transformer: {
       // Transform from PostgreSQL point format "(lng,lat)" to Coordinates object
-      from: (value: string | null): Coordinates | null => {
+      from: (value: unknown): Coordinates | null => {
         if (!value) return null;
-        // PostgreSQL point format: "(lng,lat)" or "(lng, lat)"
-        const match = value.match(/\(([^,]+),\s*([^)]+)\)/);
-        if (!match) return null;
-        const lng = parseFloat(match[1]);
-        const lat = parseFloat(match[2]);
-        return {
-          type: 'Point',
-          coordinates: [lng, lat],
-        };
+
+        // Handle object format { x: lng, y: lat } returned by some PostgreSQL drivers
+        if (typeof value === 'object' && value !== null && 'x' in value && 'y' in value) {
+          const point = value as { x: number; y: number };
+          return {
+            type: 'Point',
+            coordinates: [point.x, point.y],
+          };
+        }
+
+        // Handle string format "(lng,lat)" or "(lng, lat)"
+        if (typeof value === 'string') {
+          const match = value.match(/\(([^,]+),\s*([^)]+)\)/);
+          if (!match) return null;
+          const lng = parseFloat(match[1]);
+          const lat = parseFloat(match[2]);
+          return {
+            type: 'Point',
+            coordinates: [lng, lat],
+          };
+        }
+
+        return null;
       },
       // Transform from Coordinates object to PostgreSQL point format "(lng,lat)"
       to: (value: Coordinates | null): string | null => {

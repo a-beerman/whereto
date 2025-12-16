@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { PlaceType1 } from '@googlemaps/google-maps-services-js';
 import { CityRepository } from '../../catalog/repositories/city.repository';
 import { VenueRepository } from '../../catalog/repositories/venue.repository';
 import { VenueSourceRepository } from '../../catalog/repositories/venue-source.repository';
@@ -6,8 +7,6 @@ import { GooglePlacesService } from '../services/google-places.service';
 import { NormalizationService } from '../services/normalization.service';
 import { DeduplicationService } from '../services/deduplication.service';
 import { City } from '../../catalog/entities/city.entity';
-import { Venue } from '../../catalog/entities/venue.entity';
-import { PlaceType1 } from '@googlemaps/google-maps-services-js';
 
 export interface SyncMetrics {
   cityId: string;
@@ -62,53 +61,92 @@ export class SyncCityJob {
 
       this.logger.log(`Starting sync for city: ${city.name} (${cityId})`);
 
-      // Search for restaurants, cafes, and bars
+      // Ensure coordinates are numbers (TypeORM decimal columns might return strings)
+      const centerLat =
+        typeof city.centerLat === 'string' ? parseFloat(city.centerLat) : city.centerLat;
+      const centerLng =
+        typeof city.centerLng === 'string' ? parseFloat(city.centerLng) : city.centerLng;
+
+      if (isNaN(centerLat) || isNaN(centerLng)) {
+        throw new Error(`Invalid city coordinates: lat=${city.centerLat}, lng=${city.centerLng}`);
+      }
+
+      this.logger.log(`City coordinates: ${centerLat}, ${centerLng}`);
+
+      // Search for restaurants, cafes, and bars using Legacy Places API
+      // Legacy API supports pagination with next_page_token
       const placeTypes: PlaceType1[] = [PlaceType1.restaurant, PlaceType1.cafe, PlaceType1.bar];
       const allPlaces: Set<string> = new Set(); // Track unique place_ids
 
-      for (const type of placeTypes) {
-        this.logger.log(`Searching for ${type} in ${city.name}...`);
+      this.logger.log(`Searching for ${placeTypes.join(', ')} in ${city.name}...`);
 
+      // Search each type separately with pagination support
+      for (const placeType of placeTypes) {
         let nextPageToken: string | undefined;
         let pageCount = 0;
-        const maxPages = 10; // Limit pages per type to avoid excessive API calls
+        const maxPages = 3; // Limit pages per type (3 pages × 20 results = 60 per type max)
 
         do {
           const searchResult = await this.googlePlacesService.searchPlaces({
-            location: { lat: city.centerLat, lng: city.centerLng },
+            location: { lat: centerLat, lng: centerLng },
             radius: 10000, // 10km radius
-            type,
-            pagetoken: nextPageToken,
+            type: placeType,
+            pageToken: nextPageToken,
           });
 
           for (const place of searchResult.results) {
-            allPlaces.add(place.place_id);
-            metrics.placesFetched++;
+            // Filter by rating >= 3 at search level to avoid unnecessary place details API calls
+            // Skip places without ratings or with rating < 3
+            if (place.rating !== undefined && place.rating >= 3) {
+              allPlaces.add(place.place_id);
+              metrics.placesFetched++;
+            } else {
+              this.logger.debug(
+                `Skipping place ${place.name} (${place.place_id}) - rating ${place.rating || 'N/A'} < 3 or missing`,
+              );
+            }
           }
+
+          this.logger.log(
+            `Page ${pageCount + 1}: Found ${searchResult.results.length} ${placeType}s (${allPlaces.size} total unique places)`,
+          );
 
           nextPageToken = searchResult.nextPageToken;
           pageCount++;
 
-          // Rate limiting: wait between pages
+          // Google requires ~2 second delay between pagination requests
           if (nextPageToken && pageCount < maxPages) {
-            await this.delay(2000); // 2 second delay between pages
+            await this.delay(2000);
           }
         } while (nextPageToken && pageCount < maxPages);
+
+        // Small delay between different type searches
+        await this.delay(500);
       }
 
       this.logger.log(`Found ${allPlaces.size} unique places. Processing...`);
 
+      // Limit places for debugging (set to 0 or remove to sync all)
+      const MAX_PLACES = 100;
+      const placesToProcess =
+        MAX_PLACES > 0 ? Array.from(allPlaces).slice(0, MAX_PLACES) : Array.from(allPlaces);
+
+      if (MAX_PLACES > 0 && allPlaces.size > MAX_PLACES) {
+        this.logger.log(
+          `Limiting to ${MAX_PLACES} places for debugging (found ${allPlaces.size} total)`,
+        );
+      }
+
       // Process each place
-      for (const placeId of allPlaces) {
+      for (const placeId of placesToProcess) {
         try {
           await this.processPlace(placeId, city, metrics);
           // Rate limiting: delay between place details requests
           await this.delay(100); // 100ms delay
         } catch (error) {
           metrics.errors++;
-          metrics.errorDetails.push(
-            `Place ${placeId}: ${error instanceof Error ? error.message : String(error)}`,
-          );
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          metrics.errorDetails.push(`Place ${placeId}: ${errorMessage}`);
           this.logger.error(`Error processing place ${placeId}`, error);
         }
       }
@@ -157,6 +195,40 @@ export class SyncCityJob {
     // Get place details
     const googlePlace = await this.googlePlacesService.getPlaceDetails(placeId);
     if (!googlePlace) {
+      metrics.errors++;
+      metrics.errorDetails.push(`Place ${placeId}: Failed to fetch place details`);
+      return;
+    }
+
+    // Filter by rating >= 3 (safety check - also filtered at search level)
+    // Skip places without ratings (undefined) or with rating < 3
+    // Note: This is a double-check since ratings might differ between search and details
+    if (googlePlace.rating === undefined || googlePlace.rating < 3) {
+      this.logger.debug(
+        `Skipping place ${googlePlace.name} (${placeId}) - rating ${googlePlace.rating || 'N/A'} < 3 or missing`,
+      );
+      return;
+    }
+
+    // Exclude places that are primarily gas stations, convenience stores, etc.
+    // Even if they have a cafe/restaurant attached, we don't want them
+    const excludedTypes = [
+      'gas_station',
+      'convenience_store',
+      'car_wash',
+      'car_repair',
+      'atm',
+      'bank',
+      'hospital',
+      'pharmacy',
+      'supermarket',
+      'grocery_or_supermarket',
+    ];
+    const hasExcludedType = googlePlace.types.some((type) => excludedTypes.includes(type));
+    if (hasExcludedType) {
+      this.logger.debug(
+        `Skipping place ${googlePlace.name} (${placeId}) - excluded type: ${googlePlace.types.filter((t) => excludedTypes.includes(t)).join(', ')}`,
+      );
       return;
     }
 

@@ -92,10 +92,10 @@ export class VenueRepository {
     // Geo filter - bbox (using PostgreSQL POINT type)
     if (filters.bbox) {
       const [minLat, minLng, maxLat, maxLng] = filters.bbox.split(',').map(Number);
-      // PostgreSQL POINT format: (x, y) = (lng, lat)
-      // Access coordinates using (point).x for lng and (point).y for lat
+      // PostgreSQL native POINT format: (x, y) = (lng, lat)
+      // Access coordinates using point[0] for lng (x) and point[1] for lat (y)
       queryBuilder.andWhere(
-        'venue.location IS NOT NULL AND (venue.location).x BETWEEN :minLng AND :maxLng AND (venue.location).y BETWEEN :minLat AND :maxLat',
+        'venue.location IS NOT NULL AND (venue.location)[0] BETWEEN :minLng AND :maxLng AND (venue.location)[1] BETWEEN :minLat AND :maxLat',
         { minLng, maxLng, minLat, maxLat },
       );
     }
@@ -106,8 +106,9 @@ export class VenueRepository {
     if (filters.lat && filters.lng && filters.radiusMeters) {
       const bbox = calculateBoundingBox(filters.lat, filters.lng, filters.radiusMeters);
       // Pre-filter with bounding box using POINT coordinates
+      // Access coordinates using point[0] for lng (x) and point[1] for lat (y)
       queryBuilder.andWhere(
-        'venue.location IS NOT NULL AND (venue.location).x BETWEEN :minLng AND :maxLng AND (venue.location).y BETWEEN :minLat AND :maxLat',
+        'venue.location IS NOT NULL AND (venue.location)[0] BETWEEN :minLng AND :maxLng AND (venue.location)[1] BETWEEN :minLat AND :maxLat',
         { minLng: bbox.minLng, maxLng: bbox.maxLng, minLat: bbox.minLat, maxLat: bbox.maxLat },
       );
     }

@@ -3,13 +3,24 @@
   "targetDefaults": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": ["production", "^production"],
+      "cache": true
+    },
+    "@nx/node:build": {
+      "cache": true,
+      "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     },
+    "@nx/node:serve": {
+      "cache": false
+    },
     "test": {
-      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"]
+      "inputs": ["default", "^production", "{workspaceRoot}/jest.preset.js"],
+      "cache": true
     },
     "lint": {
-      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"]
+      "inputs": ["default", "{workspaceRoot}/.eslintrc.json"],
+      "cache": true
     }
   },
   "namedInputs": {
@@ -24,6 +35,15 @@
       "!{projectRoot}/test-setup.[jt]s"
     ],
     "sharedGlobals": []
+  },
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": ["build", "lint", "test"],
+        "outputStyle": "stream"
+      }
+    }
   },
   "plugins": [
     {

@@ -1,11 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, ObjectLiteral } from 'typeorm';
 
 /**
  * Create a mock repository for testing
  */
-export function createMockRepository<T>(): Partial<Repository<T>> {
+export function createMockRepository<T extends ObjectLiteral>(): Partial<Repository<T>> {
   return {
     find: jest.fn(),
     findOne: jest.fn(),
@@ -37,7 +37,7 @@ export async function createTestingModule(
 /**
  * Mock repository factory for TypeORM entities
  */
-export function mockRepositoryFactory<T>(entity: any) {
+export function mockRepositoryFactory<T extends ObjectLiteral>(entity: any) {
   return {
     provide: getRepositoryToken(entity),
     useValue: createMockRepository<T>(),

@@ -1,5 +1,6 @@
 import { registerAs } from '@nestjs/config';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
+import { SnakeNamingStrategy } from 'typeorm-naming-strategies';
 
 export default registerAs(
   'database',
@@ -13,6 +14,7 @@ export default registerAs(
     ssl: process.env.DB_SSL === 'true',
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
+    namingStrategy: new SnakeNamingStrategy(),
     // CRITICAL: synchronize must NEVER be true in production
     // It will auto-disable if NODE_ENV=production OR if DB_SYNCHRONIZE=false
     synchronize:

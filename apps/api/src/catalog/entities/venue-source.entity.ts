@@ -23,7 +23,7 @@ export class VenueSource {
   venueId!: string;
 
   @ManyToOne(() => Venue, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'venueId' })
+  @JoinColumn()
   venue!: Venue;
 
   @Column({ type: 'varchar', length: 50 })

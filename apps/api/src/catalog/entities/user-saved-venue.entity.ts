@@ -26,7 +26,7 @@ export class UserSavedVenue {
   venueId!: string;
 
   @ManyToOne(() => Venue, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'venueId' })
+  @JoinColumn()
   venue!: Venue;
 
   @CreateDateColumn({ type: 'timestamptz' })

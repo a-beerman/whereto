@@ -23,7 +23,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const message =
       exception instanceof HttpException ? exception.getResponse() : 'Internal server error';
 
-    const errorResponse = {
+    const errorResponse: any = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
@@ -31,6 +31,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
       correlationId: (request as any).correlationId,
       message: typeof message === 'string' ? message : (message as any).message || message,
     };
+
+    // Include error details in development mode
+    if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
+      errorResponse.error = exception.message;
+      errorResponse.stack = exception.stack;
+    }
 
     // Log error with structured context (error tracking service can be injected if needed)
     if (exception instanceof Error && status >= 500) {

@@ -34,12 +34,18 @@ export class IngestionController {
     },
   })
   async syncCity(@Param('cityId') cityId: string) {
-    const metrics = await this.syncCityJob.syncCity(cityId);
-    return {
-      data: {
-        success: true,
-        metrics,
-      },
-    };
+    try {
+      const metrics = await this.syncCityJob.syncCity(cityId);
+      return {
+        data: {
+          success: true,
+          metrics,
+        },
+      };
+    } catch (error) {
+      // Log the full error for debugging
+      console.error('Sync error details:', error);
+      throw error;
+    }
   }
 }

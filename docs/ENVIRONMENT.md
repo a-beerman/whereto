@@ -76,7 +76,8 @@ LOG_LEVEL=debug
 
 ```bash
 # Google Places API (for ingestion only)
-GOOGLE_PLACES_API_KEY=your_api_key_here
+# Path to service account JSON key file (absolute or relative to project root)
+GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./google-service-account-key.json
 
 # Telegram (for bot communication)
 TELEGRAM_BOT_TOKEN=your_bot_token_here
@@ -315,7 +316,7 @@ async function loadSecrets() {
 
 ### Optional
 
-- [ ] `GOOGLE_PLACES_API_KEY` (for ingestion)
+- [ ] `GOOGLE_SERVICE_ACCOUNT_KEY_FILE` (for ingestion - path to service account JSON key file)
 - [ ] `REDIS_HOST` (for caching)
 - [ ] `JWT_SECRET` (if using JWT)
 
@@ -337,7 +338,8 @@ API_PORT=3000
 NODE_ENV=development
 
 # Google Places (for ingestion)
-GOOGLE_PLACES_API_KEY=your_api_key_here
+# Path to service account JSON key file (absolute or relative to project root)
+GOOGLE_SERVICE_ACCOUNT_KEY_FILE=./google-service-account-key.json
 
 # Telegram
 TELEGRAM_BOT_TOKEN=your_bot_token_here

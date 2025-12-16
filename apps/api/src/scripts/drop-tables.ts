@@ -1,6 +1,6 @@
 /**
- * Run database migrations
- * Run with: npx ts-node apps/api/src/scripts/run-migrations.ts
+ * Drop all tables to reset database schema
+ * Run with: npx tsx apps/api/src/scripts/drop-tables.ts
  */
 
 import { DataSource } from 'typeorm';
@@ -10,7 +10,7 @@ import * as path from 'path';
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-async function runMigrations() {
+async function dropTables() {
   const dataSource = new DataSource({
     type: 'postgres',
     host: process.env.DB_HOST || process.env.DB_HOSTNAME || 'localhost',
@@ -18,7 +18,6 @@ async function runMigrations() {
     username: process.env.DB_USER || process.env.DB_USERNAME || 'postgres',
     password: process.env.DB_PASSWORD || '1973',
     database: process.env.DB_NAME || process.env.DB_DATABASE || 'whereto_catalog',
-    migrations: [path.join(__dirname, '../migrations/*{.ts,.js}')],
     synchronize: false,
     logging: true,
   });
@@ -27,26 +26,23 @@ async function runMigrations() {
     await dataSource.initialize();
     console.log('Database connection established');
 
-    // Check if migrations table exists and if there are any migrations
     const queryRunner = dataSource.createQueryRunner();
-    const migrationsTableExists = await queryRunner.hasTable('migrations');
 
-    if (migrationsTableExists) {
-      const executedMigrations = await queryRunner.query(
-        'SELECT * FROM migrations ORDER BY timestamp DESC',
-      );
-      console.log(`Found ${executedMigrations.length} executed migrations`);
-    }
+    console.log('Dropping existing tables...');
+    await queryRunner.query('DROP TABLE IF EXISTS user_saved_venues CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS venue_partners CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS venue_overrides CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS venue_sources CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS venues CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS cities CASCADE');
+    await queryRunner.query('DROP TABLE IF EXISTS migrations CASCADE');
 
-    console.log('Running migrations...');
-    await dataSource.runMigrations();
-
-    console.log('✅ Migrations completed successfully');
+    console.log('✅ All tables dropped successfully');
     await dataSource.destroy();
   } catch (error) {
-    console.error('Error running migrations:', error);
+    console.error('Error dropping tables:', error);
     process.exit(1);
   }
 }
 
-runMigrations();
+dropTables();

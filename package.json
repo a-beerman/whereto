@@ -19,17 +19,25 @@
     "prepare": "husky install",
     "generate:api-client": "npx tsx scripts/generate-api-client.ts",
     "generate:api-client:local": "npx tsx scripts/generate-api-client.ts --local",
-    "swagger:export": "curl -o openapi.json http://localhost:3000/docs-json"
+    "swagger:export": "curl -o openapi.json http://localhost:3000/docs-json",
+    "verify:google-places": "npx tsx scripts/verify-google-places.ts",
+    "sync:chisinau": "npx tsx scripts/sync-chisinau.ts"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.3",
     "@nestjs/cli": "^11.0.14",
+    "@nestjs/schematics": "^11.0.5",
     "@nestjs/testing": "^11.1.9",
     "@nestjs/typeorm": "^11.0.0",
     "@nx/eslint": "^22.2.3",
     "@nx/eslint-plugin": "^22.2.3",
+    "@nx/js": "^22.2.3",
+    "@nx/nest": "^22.2.3",
     "@nx/node": "^22.2.3",
     "@nx/workspace": "^22.2.3",
+    "@openapitools/openapi-generator-cli": "^2.15.0",
+    "@swc-node/register": "~1.9.1",
+    "@swc/core": "~1.5.7",
     "@types/express": "^5.0.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^25.0.2",
@@ -37,15 +45,16 @@
     "@typescript-eslint/eslint-plugin": "^8.50.0",
     "@typescript-eslint/parser": "^8.50.0",
     "concurrently": "^9.0.0",
+    "dotenv": "^17.1.0",
     "eslint": "^9.39.2",
     "husky": "^9.1.7",
     "jest": "^30.2.0",
     "lint-staged": "^16.2.7",
     "nx": "^22.2.3",
-    "@openapitools/openapi-generator-cli": "^2.15.0",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
     "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
     "typeorm": "^0.3.28",
     "typescript": "^5.4.0"
   },
@@ -59,6 +68,7 @@
   },
   "dependencies": {
     "@googlemaps/google-maps-services-js": "^3.4.2",
+    "@googlemaps/places": "^2.2.0",
     "@nestjs/common": "^11.1.9",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.9",
@@ -74,6 +84,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "telegraf": "^4.16.3",
+    "typeorm-naming-strategies": "^4.1.0",
     "uuid": "^13.0.0"
   }
 }
