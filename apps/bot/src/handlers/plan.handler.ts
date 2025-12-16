@@ -350,7 +350,14 @@ export class PlanHandler {
     try {
       // Start voting to generate shortlist
       const voteResponse = await this.apiClient.startVoting(planId);
-      const { vote, options } = voteResponse.data;
+      const voteData = voteResponse.data as {
+        vote?: unknown;
+        options?: Array<{
+          venue: { name: string; rating?: number; address: string };
+          venueId: string;
+        }>;
+      };
+      const options = voteData?.options;
 
       if (!options || options.length === 0) {
         await ctx.reply('Варианты ещё не сгенерированы. Подождите немного.');
@@ -358,7 +365,7 @@ export class PlanHandler {
       }
 
       const optionsText = options
-        .map((opt: any, index: number) => {
+        .map((opt, index: number) => {
           const venue = opt.venue;
           return `${index + 1}. **${venue.name}**\n⭐ ${venue.rating || 'N/A'} · ${venue.address}`;
         })
@@ -369,7 +376,7 @@ export class PlanHandler {
         {
           reply_markup: {
             inline_keyboard: [
-              ...options.map((opt: any, index: number) => [
+              ...options.map((opt, index: number) => [
                 {
                   text: `${index + 1}. ${opt.venue.name}`,
                   callback_data: `plan:vote:${planId}:${opt.venueId}`,
@@ -412,7 +419,15 @@ export class PlanHandler {
       const userId = ctx.from?.id.toString() || '';
 
       const result = await this.apiClient.closePlan(planId, userId);
-      const { plan, winner } = result.data;
+      const closeData = result.data as {
+        plan?: unknown;
+        winner?: {
+          venue: { name: string; rating?: number; address: string };
+          venueId: string;
+          voteCount: number;
+        };
+      };
+      const winner = closeData?.winner;
 
       if (!winner) {
         await ctx.reply('Не удалось определить победителя. Проверьте, что все проголосовали.');

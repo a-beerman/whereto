@@ -5,7 +5,12 @@
     "module": "commonjs",
     "types": ["node"],
     "emitDecoratorMetadata": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "baseUrl": "../..",
+    "paths": {
+      "@whereto/shared": ["libs/shared/src/index.ts"],
+      "@whereto/shared/*": ["libs/shared/src/*"]
+    }
   },
   "exclude": ["jest.config.ts", "src/**/*.spec.ts", "src/**/*.test.ts"]
 }

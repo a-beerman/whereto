@@ -1,26 +1,82 @@
-import { Injectable } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+/**
+ * API Client Service for the Telegram Bot
+ * Uses the auto-generated typed Axios client from OpenAPI spec
+ */
+import {
+  Configuration,
+  CatalogApi,
+  PlansApi,
+  CitiesControllerFindAll200ResponseDataInner,
+  VenuesControllerFindAllSortEnum,
+  CreatePlanDto,
+  CreatePlanDtoBudgetEnum,
+  JoinPlanDto,
+  VoteDto,
+  ClosePlanDto,
+  SaveVenueDto,
+} from '@whereto/shared/api-client-axios';
 
-@Injectable()
+// Re-export types for handlers
+export type City = CitiesControllerFindAll200ResponseDataInner;
+export type VenueSortOrder = VenuesControllerFindAllSortEnum;
+
+export interface Venue {
+  id: string;
+  name: string;
+  address: string;
+  lat?: number;
+  lng?: number;
+  categories?: string[];
+  rating?: number;
+  ratingCount?: number;
+  hours?: string[];
+  distance?: number;
+}
+
 export class ApiClientService {
-  private readonly client: AxiosInstance;
-  private readonly baseUrl: string;
+  private readonly catalogApi: CatalogApi;
+  private readonly plansApi: PlansApi;
 
   constructor() {
-    this.baseUrl = process.env.API_URL || 'http://localhost:3000';
-    this.client = axios.create({
-      baseURL: `${this.baseUrl}/api/v1`,
-      headers: {
-        'Content-Type': 'application/json',
-        // TODO: Add service token for authentication
-        'X-Service-Token': process.env.API_SERVICE_TOKEN || '',
+    const baseUrl = process.env.API_URL || 'http://localhost:3000';
+
+    const config = new Configuration({
+      basePath: baseUrl,
+      baseOptions: {
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Service-Token': process.env.API_SERVICE_TOKEN || '',
+        },
+        timeout: 10000,
       },
-      timeout: 10000,
     });
+
+    this.catalogApi = new CatalogApi(config);
+    this.plansApi = new PlansApi(config);
+  }
+
+  // ============ Cities ============
+
+  /**
+   * Get all available cities
+   */
+  async getCities(): Promise<{ data: City[] }> {
+    const response = await this.catalogApi.citiesControllerFindAll();
+    return { data: response.data.data || [] };
   }
 
   /**
-   * Search venues
+   * Get city by ID
+   */
+  async getCity(cityId: string): Promise<{ data: City }> {
+    const response = await this.catalogApi.citiesControllerFindOne(cityId);
+    return { data: response.data.data as City };
+  }
+
+  // ============ Venues ============
+
+  /**
+   * Search venues with filters
    */
   async searchVenues(params: {
     cityId?: string;
@@ -33,78 +89,72 @@ export class ApiClientService {
     openNow?: boolean;
     limit?: number;
     offset?: number;
-  }) {
-    const response = await this.client.get('/venues', { params });
-    return response.data;
-  }
-
-  /**
-   * Get venue details
-   */
-  async getVenue(venueId: string) {
-    const response = await this.client.get(`/venues/${venueId}`);
-    return response.data;
-  }
-
-  /**
-   * Get cities
-   */
-  async getCities() {
-    const response = await this.client.get('/cities');
-    return response.data;
-  }
-
-  /**
-   * Get city by ID
-   */
-  async getCity(cityId: string) {
-    const response = await this.client.get(`/cities/${cityId}`);
-    return response.data;
-  }
-
-  /**
-   * Get saved venues for user
-   */
-  async getSavedVenues(userId: string, limit = 20, offset = 0) {
-    const response = await this.client.get('/me/saved', {
-      params: { limit, offset },
-      headers: {
-        'X-User-Id': userId,
-      },
-    });
-    return response.data;
-  }
-
-  /**
-   * Save venue for user
-   */
-  async saveVenue(userId: string, venueId: string) {
-    const response = await this.client.post(
-      '/me/saved',
-      { venueId },
-      {
-        headers: {
-          'X-User-Id': userId,
-        },
-      },
+    sort?: VenueSortOrder;
+  }): Promise<{ data: Venue[]; meta?: { total?: number; hasMore?: boolean } }> {
+    const response = await this.catalogApi.venuesControllerFindAll(
+      params.q,
+      params.cityId,
+      params.category,
+      params.lat,
+      params.lng,
+      params.radiusMeters,
+      undefined, // bbox
+      params.minRating,
+      params.openNow,
+      params.limit,
+      params.offset,
+      undefined, // cursor
+      params.sort,
     );
-    return response.data;
+    return {
+      data: (response.data.data || []) as Venue[],
+      meta: response.data.meta,
+    };
+  }
+
+  /**
+   * Get venue details by ID
+   */
+  async getVenue(venueId: string): Promise<{ data: Venue }> {
+    const response = await this.catalogApi.venuesControllerFindOne(venueId);
+    return { data: response.data.data as Venue };
+  }
+
+  // ============ Saved Venues ============
+
+  /**
+   * Get user's saved venues
+   */
+  async getSavedVenues(userId: string, limit = 20, offset = 0): Promise<{ data: Venue[] }> {
+    const response = await this.catalogApi.userSavedVenuesControllerGetSavedVenues(
+      offset,
+      limit,
+      userId,
+    );
+    return { data: (response.data.data || []) as Venue[] };
+  }
+
+  /**
+   * Save a venue for user
+   */
+  async saveVenue(userId: string, venueId: string): Promise<{ success: boolean }> {
+    const dto: SaveVenueDto = { venueId };
+    await this.catalogApi.userSavedVenuesControllerSaveVenue(dto, userId);
+    return { success: true };
   }
 
   /**
    * Remove saved venue for user
    */
-  async removeSavedVenue(userId: string, venueId: string) {
-    const response = await this.client.delete(`/me/saved/${venueId}`, {
-      headers: {
-        'X-User-Id': userId,
-      },
-    });
-    return response.data;
+  async removeSavedVenue(userId: string, venueId: string): Promise<{ success: boolean }> {
+    await this.catalogApi.userSavedVenuesControllerRemoveSavedVenue(venueId, userId);
+    return { success: true };
   }
 
+  // ============ Plans ============
+
   /**
-   * Create plan
+   * Create a new plan
    */
   async createPlan(data: {
     telegramChatId: string;
@@ -117,71 +167,87 @@ export class ApiClientService {
     locationLng?: number;
     budget?: string;
     format?: string;
-  }) {
-    const response = await this.client.post('/plans', data);
-    return response.data;
+  }): Promise<{ data: { id: string } }> {
+    // Map budget string to enum
+    let budgetEnum: CreatePlanDtoBudgetEnum | undefined;
+    if (data.budget === '$') budgetEnum = CreatePlanDtoBudgetEnum.Dollar;
+    else if (data.budget === '$$') budgetEnum = CreatePlanDtoBudgetEnum.DoubleDollar;
+    else if (data.budget === '$$$') budgetEnum = CreatePlanDtoBudgetEnum.TripleDollar;
+
+    const dto: CreatePlanDto = {
+      telegramChatId: data.telegramChatId,
+      initiatorId: data.initiatorId,
+      date: data.date,
+      time: data.time,
+      area: data.area,
+      cityId: data.cityId,
+      locationLat: data.locationLat?.toString(),
+      locationLng: data.locationLng?.toString(),
+      budget: budgetEnum,
+      format: data.format,
+    };
+    const response = await this.plansApi.plansControllerCreatePlan(dto);
+    return { data: response.data.data as { id: string } };
   }
 
   /**
-   * Join plan
+   * Join a plan
    */
   async joinPlan(
     planId: string,
     userId: string,
-    preferences?: any,
+    preferences?: Record<string, unknown>,
     location?: { lat?: number; lng?: number },
-  ) {
-    const response = await this.client.post(`/plans/${planId}/join`, {
+  ): Promise<{ data: unknown }> {
+    const dto: JoinPlanDto = {
       userId,
-      preferences,
+      preferences: preferences as JoinPlanDto['preferences'],
       locationLat: location?.lat?.toString(),
       locationLng: location?.lng?.toString(),
-    });
-    return response.data;
+    };
+    const response = await this.plansApi.plansControllerJoinPlan(planId, dto);
+    return { data: response.data.data };
   }
 
   /**
-   * Get plan shortlist
+   * Get plan shortlist/options
    */
-  async getPlanOptions(planId: string) {
-    const response = await this.client.get(`/plans/${planId}/options`);
-    return response.data;
+  async getPlanOptions(planId: string): Promise<{ data: Venue[] }> {
+    const response = await this.plansApi.plansControllerGetShortlist(planId);
+    return { data: (response.data.data || []) as Venue[] };
   }
 
   /**
-   * Start voting
+   * Start voting for a plan
    */
-  async startVoting(planId: string) {
-    const response = await this.client.post(`/plans/${planId}/vote`);
-    return response.data;
+  async startVoting(planId: string): Promise<{ data: unknown }> {
+    const response = await this.plansApi.plansControllerStartVoting(planId);
+    return { data: response.data.data };
   }
 
   /**
-   * Cast vote
+   * Cast a vote
    */
-  async castVote(planId: string, userId: string, venueId: string) {
-    const response = await this.client.post(`/plans/${planId}/vote/cast`, {
-      userId,
-      venueId,
-    });
-    return response.data;
+  async castVote(planId: string, userId: string, venueId: string): Promise<{ data: unknown }> {
+    const dto: VoteDto = { userId, venueId };
+    const response = await this.plansApi.plansControllerCastVote(planId, dto);
+    return { data: response.data.data };
   }
 
   /**
-   * Close plan
+   * Close a plan
    */
-  async closePlan(planId: string, initiatorId: string) {
-    const response = await this.client.post(`/plans/${planId}/close`, {
-      initiatorId,
-    });
-    return response.data;
+  async closePlan(planId: string, initiatorId: string): Promise<{ data: unknown }> {
+    const dto: ClosePlanDto = { initiatorId };
+    const response = await this.plansApi.plansControllerClosePlan(planId, dto);
+    return { data: response.data.data };
   }
 
   /**
    * Get plan details
    */
-  async getPlan(planId: string) {
-    const response = await this.client.get(`/plans/${planId}`);
-    return response.data;
+  async getPlan(planId: string): Promise<{ data: unknown }> {
+    const response = await this.plansApi.plansControllerGetPlanDetails(planId);
+    return { data: response.data.data };
   }
 }

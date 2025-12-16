@@ -1,5 +1,3 @@
-import { Injectable } from '@nestjs/common';
-
 export interface UserState {
   userId: string;
   cityId?: string;
@@ -9,7 +7,6 @@ export interface UserState {
   viewingVenueId?: string;
 }
 
-@Injectable()
 export class StateService {
   private userStates: Map<string, UserState> = new Map();
 

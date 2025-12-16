@@ -210,8 +210,8 @@ export class SyncCityJob {
       return;
     }
 
-    // Exclude places that are primarily gas stations, convenience stores, etc.
-    // Even if they have a cafe/restaurant attached, we don't want them
+    // Exclude places that are primarily gas stations, convenience stores, hotels, gyms, etc.
+    // Even if they have a cafe/restaurant attached, we want standalone food venues
     const excludedTypes = [
       'gas_station',
       'convenience_store',
@@ -223,6 +223,8 @@ export class SyncCityJob {
       'pharmacy',
       'supermarket',
       'grocery_or_supermarket',
+      'lodging', // Exclude hotels (they often have restaurants but we want standalone venues)
+      'gym', // Exclude gyms (some have cafes but they're not primary food venues)
     ];
     const hasExcludedType = googlePlace.types.some((type) => excludedTypes.includes(type));
     if (hasExcludedType) {

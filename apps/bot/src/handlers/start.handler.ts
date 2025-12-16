@@ -20,8 +20,13 @@ export class StartHandler {
         return;
       }
 
+      // Filter to cities with required fields and map to keyboard format
+      const validCities = cities
+        .filter((c) => c.id && c.name)
+        .map((c) => ({ id: c.id!, name: c.name! }));
+
       await ctx.reply('Привет! В каком городе ищем места?', {
-        reply_markup: getCityKeyboard(cities),
+        reply_markup: getCityKeyboard(validCities),
         parse_mode: 'Markdown',
       });
     } catch (error) {

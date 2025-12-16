@@ -81,10 +81,11 @@ export class VenueRepository {
       });
     }
 
-    // Category filter
+    // Category filter (using JSONB ?| operator for "any key exists")
     if (filters.category) {
       const categories = Array.isArray(filters.category) ? filters.category : [filters.category];
-      queryBuilder.andWhere('venue.categories && :categories', {
+      // Use the ?| operator to check if JSONB array contains any of the specified values
+      queryBuilder.andWhere('venue.categories ?| ARRAY[:...categories]', {
         categories,
       });
     }

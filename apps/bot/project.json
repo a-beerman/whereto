@@ -5,19 +5,18 @@
   "projectType": "application",
   "targets": {
     "build": {
-      "executor": "@nx/node:build",
-      "outputs": ["{options.outputPath}"],
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/apps/bot"],
       "options": {
-        "outputPath": "dist/apps/bot",
-        "main": "apps/bot/src/main.ts",
-        "tsConfig": "apps/bot/tsconfig.app.json",
-        "assets": ["apps/bot/src/assets"]
+        "command": "npx tsc -p apps/bot/tsconfig.app.json --outDir dist/apps/bot",
+        "cwd": "{workspaceRoot}"
       }
     },
     "serve": {
-      "executor": "@nx/node:serve",
+      "executor": "nx:run-commands",
       "options": {
-        "buildTarget": "bot:build"
+        "command": "npx tsx --tsconfig apps/bot/tsconfig.app.json --watch apps/bot/src/main.ts",
+        "cwd": "{workspaceRoot}"
       }
     },
     "lint": {
