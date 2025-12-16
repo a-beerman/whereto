@@ -36,7 +36,7 @@ export class VenuesService {
     }
 
     return {
-      venues: venuesWithOverrides.map(this.toResponseDto),
+      venues: venuesWithOverrides.map((venue) => this.toResponseDto(venue)),
       total: venuesWithOverrides.length, // Update total after filtering
       nextCursor: result.nextCursor,
     };

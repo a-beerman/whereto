@@ -9,6 +9,10 @@
     "dev:miniapp": "nx serve miniapp",
     "build": "nx build",
     "test": "nx test",
+    "test:watch": "nx test --watch",
+    "test:cov": "nx test --coverage",
+    "test:api": "nx test api",
+    "test:api:cov": "nx test api --coverage",
     "lint": "nx lint",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
@@ -36,6 +40,7 @@
     "nx": "^22.2.3",
     "prettier": "^3.7.4",
     "ts-jest": "^29.4.6",
+    "ts-node": "^10.9.2",
     "typeorm": "^0.3.28",
     "typescript": "^5.4.0"
   },
