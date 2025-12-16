@@ -31,6 +31,8 @@ export interface Venue {
   ratingCount?: number;
   hours?: string[];
   distance?: number;
+  photoRefs?: string[];
+  photoUrls?: string[];
 }
 
 export class ApiClientService {

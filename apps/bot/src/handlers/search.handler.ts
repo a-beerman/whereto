@@ -2,7 +2,7 @@ import { Context } from 'telegraf';
 import { ApiClientService } from '../services/api-client.service';
 import { StateService } from '../services/state.service';
 import { getVenueListKeyboard, getBackKeyboard } from '../utils/keyboards';
-import { formatVenueList } from '../utils/formatters';
+import { formatVenueList, formatVenueListItem } from '../utils/formatters';
 
 export class SearchHandler {
   constructor(
@@ -63,31 +63,8 @@ export class SearchHandler {
       // Store venues in state for pagination
       this.stateService.updateUserState(userId, { currentPage: 0 });
 
-      const venueList = venues
-        .slice(0, 5)
-        .map((venue: any, index: number) => formatVenueList(venue, index))
-        .join('\n\n');
-
-      // Create keyboard with venue buttons
-      const venueButtons = venues.slice(0, 5).map((venue: any) => [
-        {
-          text: `${venue.name} ${venue.rating ? `⭐ ${venue.rating}` : ''}`,
-          callback_data: `venue:${venue.id}`,
-        },
-      ]);
-
-      const keyboard = {
-        inline_keyboard: [
-          ...venueButtons,
-          ...(venues.length >= 10 ? [[{ text: 'Вперёд ➡️', callback_data: 'page:1' }]] : []),
-          [{ text: '⬅️ Назад к категориям', callback_data: 'back:categories' }],
-        ],
-      };
-
-      await ctx.reply(`Нашёл варианты:\n\n${venueList}`, {
-        reply_markup: keyboard,
-        parse_mode: 'Markdown',
-      });
+      // Display venues with photos
+      await this.displayVenueList(ctx, venues.slice(0, 5), venues.length >= 10);
     } catch (error) {
       console.error('Error in search query:', error);
       await ctx.reply('Произошла ошибка при поиске. Попробуйте позже.');
@@ -123,34 +100,64 @@ export class SearchHandler {
       // Store venues in state for pagination
       this.stateService.updateUserState(userId, { currentPage: 0 });
 
-      const venueList = venues
-        .slice(0, 5)
-        .map((venue: any, index: number) => formatVenueList(venue, index))
-        .join('\n\n');
-
-      // Create keyboard with venue buttons
-      const venueButtons = venues.slice(0, 5).map((venue: any) => [
-        {
-          text: `${venue.name} ${venue.rating ? `⭐ ${venue.rating}` : ''}`,
-          callback_data: `venue:${venue.id}`,
-        },
-      ]);
-
-      const keyboard = {
-        inline_keyboard: [
-          ...venueButtons,
-          ...(venues.length >= 10 ? [[{ text: 'Вперёд ➡️', callback_data: 'page:1' }]] : []),
-          [{ text: '⬅️ Назад к категориям', callback_data: 'back:categories' }],
-        ],
-      };
-
-      await ctx.reply(`Нашёл варианты:\n\n${venueList}`, {
-        reply_markup: keyboard,
-        parse_mode: 'Markdown',
-      });
+      // Display venues with photos
+      await this.displayVenueList(ctx, venues.slice(0, 5), venues.length >= 10);
     } catch (error) {
       console.error('Error in category search:', error);
       await ctx.reply('Произошла ошибка. Попробуйте позже.');
     }
+  }
+
+  /**
+   * Display venue list with photo cards
+   */
+  private async displayVenueList(ctx: Context, venues: any[], hasMore: boolean) {
+    // Send each venue as a photo card with inline button
+    for (const venue of venues) {
+      const photoUrl = venue.photoUrls?.[0] || venue.photoRefs?.[0];
+      const caption = formatVenueListItem(venue);
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: `${venue.name} ⭐ ${venue.rating || '-'}`, callback_data: `venue:${venue.id}` }],
+        ],
+      };
+
+      if (photoUrl && photoUrl.startsWith('http')) {
+        try {
+          await ctx.replyWithPhoto(photoUrl, {
+            caption,
+            parse_mode: 'Markdown',
+            reply_markup: keyboard,
+          });
+        } catch (photoError) {
+          // Fallback to text if photo fails
+          await ctx.reply(caption, {
+            parse_mode: 'Markdown',
+            reply_markup: keyboard,
+          });
+        }
+      } else {
+        // No photo - text only
+        await ctx.reply(caption, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard,
+        });
+      }
+
+      // Small delay to avoid rate limiting
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Send navigation keyboard
+    const navKeyboard = {
+      inline_keyboard: [
+        ...(hasMore ? [[{ text: 'Вперёд ➡️', callback_data: 'page:1' }]] : []),
+        [{ text: '⬅️ Назад к категориям', callback_data: 'back:categories' }],
+      ],
+    };
+
+    await ctx.reply('Выбери заведение или листай дальше ⬆️', {
+      reply_markup: navKeyboard,
+    });
   }
 }
