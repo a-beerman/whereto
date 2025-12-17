@@ -1328,12 +1328,15 @@ export class PlanHandler {
         `📍 ${winner.venue.address}\n\n` +
         `Голосов: ${winner.voteCount}`;
 
+      // Create short plan ID for callback (first 8 chars)
+      const shortPlanId = planId.slice(0, 8);
+
       await ctx.reply(winnerAnnouncement, {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
             [{ text: '📍 Маршрут', callback_data: `route:${winner.venueId}` }],
-            [{ text: '📋 Забронировать', callback_data: `book:${winner.venueId.slice(0, 8)}` }],
+            [{ text: '📋 Забронировать', callback_data: `book:${shortPlanId}` }],
           ],
         },
       });
@@ -1358,6 +1361,299 @@ export class PlanHandler {
     } catch (error) {
       console.error('Error canceling plan:', error);
     }
+  }
+
+  /**
+   * Handle booking request
+   */
+  async handleBookingRequest(ctx: Context, shortPlanId: string) {
+    try {
+      await ctx.answerCbQuery('⏳ Создаю запрос на бронирование...');
+
+      // Find plan by short ID
+      const planInfo = this.getPlanInfo(shortPlanId);
+      if (!planInfo) {
+        await ctx.reply('❌ План не найден. Возможно, он был удалён.');
+        return;
+      }
+
+      const planId = planInfo.fullId;
+
+      // Get plan details to get date, time, and participants count
+      const planResponse = await this.apiClient.getPlan(planId);
+      const plan = planResponse.data as {
+        id: string;
+        date: string;
+        time: string;
+        participants?: Array<{ id: string }>;
+        winningVenueId?: string;
+        winningVenue?: { id: string };
+      };
+
+      if (!plan) {
+        await ctx.reply('❌ Не удалось получить данные плана.');
+        return;
+      }
+
+      // Get winning venue ID
+      const venueId = plan.winningVenueId || plan.winningVenue?.id;
+      if (!venueId) {
+        await ctx.reply('❌ Не удалось определить заведение для бронирования.');
+        return;
+      }
+
+      // Prepare booking request data
+      const requestedDate = plan.date; // ISO date string (YYYY-MM-DD)
+      const requestedTime = plan.time; // HH:mm format
+      const participantsCount = plan.participants?.length || 1;
+
+      // Get venue details for contact information
+      const venueResponse = await this.apiClient.getVenue(venueId);
+      const venue = venueResponse.data as {
+        name: string;
+        address: string;
+        location?: { coordinates: [number, number] }; // [lng, lat]
+        phone?: string;
+        website?: string;
+        socialMedia?: {
+          facebook?: string;
+          instagram?: string;
+          twitter?: string;
+        };
+      };
+
+      // Create booking request
+      try {
+        const bookingResponse = await this.apiClient.createBookingRequest(
+          planId,
+          venueId,
+          requestedDate,
+          requestedTime,
+          participantsCount,
+        );
+
+        const bookingData = bookingResponse.data as {
+          id: string;
+          status: string;
+          requestedDate: string;
+          requestedTime: string;
+        };
+
+        await ctx.reply(
+          `✅ Запрос на бронирование создан!\n\n` +
+            `📅 Дата: ${requestedDate}\n` +
+            `🕐 Время: ${requestedTime}\n` +
+            `👥 Гостей: ${participantsCount}\n\n` +
+            `Статус: ${bookingData.status === 'pending' ? '⏳ Ожидает подтверждения' : bookingData.status}\n\n` +
+            `Заведение получит уведомление и подтвердит бронирование.`,
+        );
+      } catch (bookingError: unknown) {
+        const axiosError = bookingError as {
+          response?: { status?: number; data?: { message?: string } };
+        };
+        if (axiosError?.response?.status === 400) {
+          const message = axiosError.response.data?.message || '';
+
+          // Check if venue is not a partner
+          if (message.includes('not a partner') || message.includes('не является партнёром')) {
+            // Show contact options for non-partner venues
+            await this.showVenueContacts(ctx, venue, venueId);
+          } else {
+            await ctx.reply(
+              `❌ ${message || 'Не удалось создать запрос на бронирование'}\n\nВозможно, план ещё не закрыт.`,
+            );
+          }
+        } else {
+          console.error('Error creating booking request:', bookingError);
+          await ctx.reply(
+            '❌ Произошла ошибка при создании запроса на бронирование. Попробуйте позже.',
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Error handling booking request:', error);
+      await ctx.reply('❌ Произошла ошибка. Попробуйте позже.');
+    }
+  }
+
+  /**
+   * Normalize phone number to international format (digits only)
+   */
+  private normalizePhoneNumber(phone: string): string | null {
+    if (!phone) return null;
+    // Remove all non-digit characters except +
+    const cleaned = phone.replace(/[^\d+]/g, '');
+    // If starts with +, keep it; otherwise assume it's local format
+    return cleaned.startsWith('+') ? cleaned : cleaned;
+  }
+
+  /**
+   * Generate WhatsApp link from phone number
+   */
+  private generateWhatsAppLink(phone: string): string {
+    const normalized = this.normalizePhoneNumber(phone);
+    if (!normalized) return '';
+    // Remove + if present, wa.me doesn't need it
+    const number = normalized.replace(/^\+/, '');
+    return `https://wa.me/${number}`;
+  }
+
+  /**
+   * Generate Viber link from phone number
+   */
+  private generateViberLink(phone: string): string {
+    const normalized = this.normalizePhoneNumber(phone);
+    if (!normalized) return '';
+    // Viber needs + prefix
+    const number = normalized.startsWith('+') ? normalized : `+${normalized}`;
+    return `viber://chat?number=${number}`;
+  }
+
+  /**
+   * Show venue contact options for non-partner venues
+   */
+  private async showVenueContacts(
+    ctx: Context,
+    venue: {
+      name: string;
+      address: string;
+      location?: { coordinates: [number, number] };
+      phone?: string;
+      website?: string;
+      socialMedia?: {
+        facebook?: string;
+        instagram?: string;
+        twitter?: string;
+        telegram?: string;
+        whatsapp?: string;
+        viber?: string;
+        messenger?: string;
+      };
+    },
+    venueId: string,
+  ) {
+    const buttons: Array<Array<{ text: string; url?: string; callback_data?: string }>> = [];
+
+    // Phone button
+    if (venue.phone) {
+      buttons.push([{ text: `📞 Позвонить: ${venue.phone}`, url: `tel:${venue.phone}` }]);
+    }
+
+    // Website button
+    if (venue.website) {
+      buttons.push([{ text: '🌐 Открыть сайт', url: venue.website }]);
+    }
+
+    // Social media and messenger buttons
+    const socialButtons: Array<{ text: string; url: string }> = [];
+
+    // Messengers (priority - more direct communication)
+    // Telegram - only if explicitly provided (can't generate from phone)
+    if (venue.socialMedia?.telegram) {
+      const telegramUrl = venue.socialMedia.telegram.startsWith('http')
+        ? venue.socialMedia.telegram
+        : venue.socialMedia.telegram.startsWith('@')
+          ? `https://t.me/${venue.socialMedia.telegram.slice(1)}`
+          : `https://t.me/${venue.socialMedia.telegram}`;
+      socialButtons.push({ text: '💬 Telegram', url: telegramUrl });
+    }
+
+    // WhatsApp - use explicit link if provided, otherwise generate from phone
+    if (venue.socialMedia?.whatsapp) {
+      const whatsappUrl = venue.socialMedia.whatsapp.startsWith('http')
+        ? venue.socialMedia.whatsapp
+        : `https://wa.me/${venue.socialMedia.whatsapp.replace(/[^0-9]/g, '')}`;
+      socialButtons.push({ text: '💚 WhatsApp', url: whatsappUrl });
+    } else if (venue.phone) {
+      // Auto-generate WhatsApp link from phone number
+      const whatsappUrl = this.generateWhatsAppLink(venue.phone);
+      if (whatsappUrl) {
+        socialButtons.push({ text: '💚 WhatsApp', url: whatsappUrl });
+      }
+    }
+
+    // Viber - use explicit link if provided, otherwise generate from phone
+    if (venue.socialMedia?.viber) {
+      const viberUrl = venue.socialMedia.viber.startsWith('http')
+        ? venue.socialMedia.viber
+        : `viber://chat?number=${venue.socialMedia.viber.replace(/[^0-9]/g, '')}`;
+      socialButtons.push({ text: '💜 Viber', url: viberUrl });
+    } else if (venue.phone) {
+      // Auto-generate Viber link from phone number
+      const viberUrl = this.generateViberLink(venue.phone);
+      if (viberUrl) {
+        socialButtons.push({ text: '💜 Viber', url: viberUrl });
+      }
+    }
+
+    // Messenger - only if explicitly provided (can't generate from phone)
+    if (venue.socialMedia?.messenger) {
+      socialButtons.push({ text: '💙 Messenger', url: venue.socialMedia.messenger });
+    }
+
+    // Social networks
+    if (venue.socialMedia?.facebook) {
+      socialButtons.push({ text: '📘 Facebook', url: venue.socialMedia.facebook });
+    }
+    if (venue.socialMedia?.instagram) {
+      socialButtons.push({ text: '📷 Instagram', url: venue.socialMedia.instagram });
+    }
+    if (venue.socialMedia?.twitter) {
+      socialButtons.push({ text: '🐦 Twitter', url: venue.socialMedia.twitter });
+    }
+
+    // Add buttons in rows (max 2 per row for better UX)
+    if (socialButtons.length > 0) {
+      for (let i = 0; i < socialButtons.length; i += 2) {
+        buttons.push(socialButtons.slice(i, i + 2));
+      }
+    }
+
+    // Google Maps link (always show as fallback)
+    if (venue.location?.coordinates) {
+      const [lng, lat] = venue.location.coordinates;
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}&query_place_id=${encodeURIComponent(venue.name + ' ' + venue.address)}`;
+      buttons.push([{ text: '📍 Открыть в Google Maps', url: googleMapsUrl }]);
+    } else {
+      // Fallback: search by address
+      const searchQuery = encodeURIComponent(`${venue.name} ${venue.address}`);
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${searchQuery}`;
+      buttons.push([{ text: '📍 Открыть в Google Maps', url: googleMapsUrl }]);
+    }
+
+    // Build message with available contact info
+    let message = `📞 Свяжитесь с заведением напрямую\n\n**${venue.name}**\n📍 ${venue.address}\n\n`;
+
+    // Determine available messengers (including auto-generated from phone)
+    const availableMessengers: string[] = [];
+    if (venue.socialMedia?.telegram) availableMessengers.push('Telegram');
+    // WhatsApp: explicit or auto-generated from phone
+    if (venue.socialMedia?.whatsapp || venue.phone) availableMessengers.push('WhatsApp');
+    // Viber: explicit or auto-generated from phone
+    if (venue.socialMedia?.viber || venue.phone) availableMessengers.push('Viber');
+    if (venue.socialMedia?.messenger) availableMessengers.push('Messenger');
+
+    const hasContacts =
+      venue.phone || venue.website || venue.socialMedia || availableMessengers.length > 0;
+    if (hasContacts) {
+      message += 'Доступные способы связи:\n';
+      if (venue.phone) message += `📞 ${venue.phone}\n`;
+      if (venue.website) message += `🌐 ${venue.website}\n`;
+      if (availableMessengers.length > 0) {
+        message += `💬 ${availableMessengers.join(', ')}\n`;
+      }
+      message += '\n';
+    }
+
+    message +=
+      'Это заведение не является партнёром, поэтому бронирование через бота недоступно.\n\nИспользуйте кнопки ниже для связи:';
+
+    await ctx.reply(message, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: buttons,
+      },
+    });
   }
 
   // ============ Helper Methods ============

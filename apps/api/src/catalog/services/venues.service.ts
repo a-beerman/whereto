@@ -103,6 +103,9 @@ export class VenuesService {
       photoRefs: photoUrls.length > 0 ? photoUrls : venue.photoRefs, // Return URLs if available, fallback to refs
       photoUrls, // Also include separate photoUrls field
       hours: formattedHours || venue.hours, // Return formatted hours if available
+      phone: venue.phone,
+      website: venue.website,
+      socialMedia: venue.socialMedia,
       status: venue.status,
       createdAt: venue.createdAt,
       updatedAt: venue.updatedAt,

@@ -7,6 +7,12 @@ import { GooglePlacesService } from '../services/google-places.service';
 import { NormalizationService } from '../services/normalization.service';
 import { DeduplicationService } from '../services/deduplication.service';
 import { City } from '../../catalog/entities/city.entity';
+import {
+  generateSearchGrid,
+  calculateOptimalGridSize,
+  parseCityBounds,
+  SearchArea,
+} from '../utils/grid-generator.util';
 
 export interface SyncMetrics {
   cityId: string;
@@ -73,6 +79,30 @@ export class SyncCityJob {
 
       this.logger.log(`City coordinates: ${centerLat}, ${centerLng}`);
 
+      // Determine search strategy: grid for large cities, single center for small cities
+      const cityBounds = parseCityBounds(city.bounds);
+      const useGrid = cityBounds !== null; // Use grid if bounds are defined
+
+      let searchAreas: SearchArea[];
+
+      if (useGrid) {
+        // Calculate optimal grid size based on city size
+        const gridSize = calculateOptimalGridSize(cityBounds);
+        searchAreas = generateSearchGrid(cityBounds, gridSize, 8000, 20); // 8km radius, 20% overlap
+        this.logger.log(
+          `Using grid search: ${gridSize}x${gridSize} = ${searchAreas.length} search areas for ${city.name}`,
+        );
+      } else {
+        // Single center search for cities without bounds
+        searchAreas = [
+          {
+            center: { lat: centerLat, lng: centerLng },
+            radius: 10000, // 10km radius
+          },
+        ];
+        this.logger.log(`Using single center search for ${city.name}`);
+      }
+
       // Search for restaurants, cafes, and bars using Legacy Places API
       // Legacy API supports pagination with next_page_token
       const placeTypes: PlaceType1[] = [PlaceType1.restaurant, PlaceType1.cafe, PlaceType1.bar];
@@ -80,62 +110,70 @@ export class SyncCityJob {
 
       this.logger.log(`Searching for ${placeTypes.join(', ')} in ${city.name}...`);
 
-      // Search each type separately with pagination support
-      for (const placeType of placeTypes) {
-        let nextPageToken: string | undefined;
-        let pageCount = 0;
-        const maxPages = 3; // Limit pages per type (3 pages × 20 results = 60 per type max)
+      // Search each area in the grid
+      for (let areaIndex = 0; areaIndex < searchAreas.length; areaIndex++) {
+        const area = searchAreas[areaIndex];
+        this.logger.log(
+          `Search area ${areaIndex + 1}/${searchAreas.length}: center (${area.center.lat}, ${area.center.lng}), radius ${area.radius}m`,
+        );
 
-        do {
-          const searchResult = await this.googlePlacesService.searchPlaces({
-            location: { lat: centerLat, lng: centerLng },
-            radius: 10000, // 10km radius
-            type: placeType,
-            pageToken: nextPageToken,
-          });
+        // Search each type separately with pagination support
+        for (const placeType of placeTypes) {
+          let nextPageToken: string | undefined;
+          let pageCount = 0;
+          const maxPages = 3; // Limit pages per type (3 pages × 20 results = 60 per type max)
 
-          for (const place of searchResult.results) {
-            // Filter by rating >= 3 at search level to avoid unnecessary place details API calls
-            // Skip places without ratings or with rating < 3
-            if (place.rating !== undefined && place.rating >= 3) {
-              allPlaces.add(place.place_id);
-              metrics.placesFetched++;
-            } else {
-              this.logger.debug(
-                `Skipping place ${place.name} (${place.place_id}) - rating ${place.rating || 'N/A'} < 3 or missing`,
-              );
+          do {
+            const searchResult = await this.googlePlacesService.searchPlaces({
+              location: area.center,
+              radius: area.radius,
+              type: placeType,
+              pageToken: nextPageToken,
+            });
+
+            for (const place of searchResult.results) {
+              // Filter by rating >= 3 at search level to avoid unnecessary place details API calls
+              // Skip places without ratings or with rating < 3
+              if (place.rating !== undefined && place.rating >= 3) {
+                // Deduplication: only add if not already seen
+                if (!allPlaces.has(place.place_id)) {
+                  allPlaces.add(place.place_id);
+                  metrics.placesFetched++;
+                }
+              } else {
+                this.logger.debug(
+                  `Skipping place ${place.name} (${place.place_id}) - rating ${place.rating || 'N/A'} < 3 or missing`,
+                );
+              }
             }
-          }
 
-          this.logger.log(
-            `Page ${pageCount + 1}: Found ${searchResult.results.length} ${placeType}s (${allPlaces.size} total unique places)`,
-          );
+            this.logger.log(
+              `Area ${areaIndex + 1}, ${placeType}, Page ${pageCount + 1}: Found ${searchResult.results.length} places (${allPlaces.size} total unique places)`,
+            );
 
-          nextPageToken = searchResult.nextPageToken;
-          pageCount++;
+            nextPageToken = searchResult.nextPageToken;
+            pageCount++;
 
-          // Google requires ~2 second delay between pagination requests
-          if (nextPageToken && pageCount < maxPages) {
-            await this.delay(2000);
-          }
-        } while (nextPageToken && pageCount < maxPages);
+            // Google requires ~2 second delay between pagination requests
+            if (nextPageToken && pageCount < maxPages) {
+              await this.delay(2000);
+            }
+          } while (nextPageToken && pageCount < maxPages);
 
-        // Small delay between different type searches
-        await this.delay(500);
+          // Small delay between different type searches
+          await this.delay(500);
+        }
+
+        // Delay between search areas to avoid rate limiting
+        if (areaIndex < searchAreas.length - 1) {
+          await this.delay(1000);
+        }
       }
 
       this.logger.log(`Found ${allPlaces.size} unique places. Processing...`);
 
-      // Limit places for debugging (set to 0 or remove to sync all)
-      const MAX_PLACES = 100;
-      const placesToProcess =
-        MAX_PLACES > 0 ? Array.from(allPlaces).slice(0, MAX_PLACES) : Array.from(allPlaces);
-
-      if (MAX_PLACES > 0 && allPlaces.size > MAX_PLACES) {
-        this.logger.log(
-          `Limiting to ${MAX_PLACES} places for debugging (found ${allPlaces.size} total)`,
-        );
-      }
+      // Process all places (no limit for production)
+      const placesToProcess = Array.from(allPlaces);
 
       // Process each place
       for (const placeId of placesToProcess) {

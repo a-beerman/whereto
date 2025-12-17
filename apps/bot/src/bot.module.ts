@@ -295,6 +295,12 @@ _Каждый участник должен сначала выбрать гор
       await this.planHandler.handleClosePlan(ctx, shortPlanId, this.bot);
     });
 
+    // Booking request: book:<shortPlanId>
+    this.bot.action(/^book:(.+)$/, async (ctx) => {
+      const shortPlanId = ctx.match[1];
+      await this.planHandler.handleBookingRequest(ctx, shortPlanId);
+    });
+
     // ============ Poll Answer Handler ============
 
     this.bot.on('poll_answer', async (ctx) => {

@@ -40,6 +40,7 @@ async function seed() {
     }
 
     // Seed initial cities using raw SQL
+    // Chisinau bounds: covering the entire city area (~13km x 20km)
     await queryRunner.query(`
       INSERT INTO cities (name, country_code, center_lat, center_lng, bounds, timezone, is_active)
       VALUES (
@@ -47,7 +48,7 @@ async function seed() {
         'MD',
         47.0104,
         28.8638,
-        '{"minLat": 46.9, "minLng": 28.7, "maxLat": 47.1, "maxLng": 29.0}'::jsonb,
+        '{"minLat": 46.95, "minLng": 28.75, "maxLat": 47.08, "maxLng": 28.95}'::jsonb,
         'Europe/Chisinau',
         true
       )

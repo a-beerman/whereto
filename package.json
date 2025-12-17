@@ -21,6 +21,8 @@
     "generate:api-client:local": "npx tsx scripts/generate-api-client.ts --local",
     "swagger:export": "curl -o openapi.json http://localhost:3000/docs-json",
     "verify:google-places": "npx tsx scripts/verify-google-places.ts",
+    "update:chisinau-bounds": "npx tsx scripts/update-chisinau-bounds.ts",
+    "migrate": "npx tsx apps/api/src/scripts/run-migrations.ts",
     "sync:chisinau": "npx tsx scripts/sync-chisinau.ts"
   },
   "devDependencies": {

@@ -76,6 +76,23 @@ export class VenueOverrides {
   @Column({ type: 'jsonb', nullable: true })
   categoryOverrides?: string[];
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phoneOverride?: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  websiteOverride?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  socialMediaOverride?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    telegram?: string;
+    whatsapp?: string;
+    viber?: string;
+    messenger?: string;
+  };
+
   @Column({ type: 'boolean', default: false })
   hidden!: boolean;
 

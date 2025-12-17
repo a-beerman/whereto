@@ -22,6 +22,17 @@ export interface GooglePlace {
     periods?: any[];
   };
   business_status?: string;
+  phone?: string;
+  website?: string;
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    telegram?: string;
+    whatsapp?: string;
+    viber?: string;
+    messenger?: string;
+  };
 }
 
 @Injectable()
@@ -132,6 +143,8 @@ export class GooglePlacesService {
             'photo',
             'opening_hours',
             'business_status',
+            'international_phone_number',
+            'website',
           ],
           key: this.apiKey,
         },
@@ -149,6 +162,11 @@ export class GooglePlacesService {
       if (!place) {
         return null;
       }
+
+      // Extract social media links from website if available
+      // Note: Google Places API doesn't provide direct social media links,
+      // but we can try to extract them from website or other sources if needed
+      const socialMedia = this.extractSocialMedia(place.website);
 
       return {
         place_id: place.place_id || placeId,
@@ -171,6 +189,9 @@ export class GooglePlacesService {
             }
           : undefined,
         business_status: place.business_status,
+        phone: place.international_phone_number || undefined,
+        website: place.website || undefined,
+        socialMedia: socialMedia || undefined,
       };
     } catch (error) {
       this.logger.error(`Error getting place details for ${placeId}`, error);
@@ -205,5 +226,22 @@ export class GooglePlacesService {
     // No default - return empty array if no relevant types found
     // The caller (processPlace) should skip places without relevant types
     return categories;
+  }
+
+  /**
+   * Extract social media links from website URL
+   * Note: Google Places API doesn't provide direct social media links
+   * This is a placeholder for future enhancement (could parse website HTML or use other sources)
+   */
+  private extractSocialMedia(website?: string):
+    | {
+        facebook?: string;
+        instagram?: string;
+        twitter?: string;
+      }
+    | undefined {
+    // For now, return undefined as Google Places API doesn't provide social media links directly
+    // Future: could parse website HTML or use other APIs to find social media links
+    return undefined;
   }
 }

@@ -41,6 +41,9 @@ export class NormalizationService {
           : undefined,
       photoRefs,
       hours,
+      phone: googlePlace.phone,
+      website: googlePlace.website,
+      socialMedia: googlePlace.socialMedia,
       status: googlePlace.business_status === 'OPERATIONAL' ? 'active' : 'hidden',
     };
   }

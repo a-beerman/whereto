@@ -187,12 +187,20 @@ export class VenueRepository {
       return venue;
     }
 
+    // Merge social media (overrides take precedence, but merge with existing)
+    const socialMedia = overrides.socialMediaOverride
+      ? { ...venue.socialMedia, ...overrides.socialMediaOverride }
+      : venue.socialMedia;
+
     return {
       ...venue,
       name: overrides.nameOverride || venue.name,
       address: overrides.addressOverride || venue.address,
       location: overrides.pinOverride || venue.location,
       categories: overrides.categoryOverrides || venue.categories,
+      phone: overrides.phoneOverride || venue.phone,
+      website: overrides.websiteOverride || venue.website,
+      socialMedia,
       status: overrides.hidden ? 'hidden' : venue.status,
     };
   }

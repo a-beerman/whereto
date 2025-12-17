@@ -40,6 +40,35 @@ export class VenueResponseDto {
   @ApiPropertyOptional({ description: 'Opening hours (formatted or raw)' })
   hours?: any; // Opening hours (formatted or raw)
 
+  @ApiPropertyOptional({ description: 'Phone number (international format)' })
+  phone?: string;
+
+  @ApiPropertyOptional({ description: 'Website URL' })
+  website?: string;
+
+  @ApiPropertyOptional({
+    description: 'Social media and messenger links',
+    type: 'object',
+    properties: {
+      facebook: { type: 'string' },
+      instagram: { type: 'string' },
+      twitter: { type: 'string' },
+      telegram: { type: 'string' },
+      whatsapp: { type: 'string' },
+      viber: { type: 'string' },
+      messenger: { type: 'string' },
+    },
+  })
+  socialMedia?: {
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    telegram?: string;
+    whatsapp?: string;
+    viber?: string;
+    messenger?: string;
+  };
+
   @ApiProperty({ description: 'Venue status', enum: ['active', 'hidden', 'duplicate'] })
   status!: 'active' | 'hidden' | 'duplicate';
 

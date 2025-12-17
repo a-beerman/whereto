@@ -14,6 +14,7 @@ import {
   VoteDto,
   ClosePlanDto,
   SaveVenueDto,
+  CreateBookingRequestDto,
 } from '@whereto/shared/api-client-axios';
 
 // Re-export types for handlers
@@ -267,6 +268,28 @@ export class ApiClientService {
    */
   async getPlan(planId: string): Promise<{ data: unknown }> {
     const response = await this.plansApi.plansControllerGetPlanDetails(planId);
+    return { data: response.data.data };
+  }
+
+  /**
+   * Create booking request for a plan
+   */
+  async createBookingRequest(
+    planId: string,
+    venueId: string,
+    requestedDate: string,
+    requestedTime: string,
+    participantsCount: number,
+    notes?: string,
+  ): Promise<{ data: unknown }> {
+    const dto: CreateBookingRequestDto = {
+      venueId,
+      requestedDate,
+      requestedTime,
+      participantsCount,
+      notes,
+    };
+    const response = await this.plansApi.plansControllerCreateBookingRequest(planId, dto);
     return { data: response.data.data };
   }
 }

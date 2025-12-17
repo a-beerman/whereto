@@ -99,6 +99,25 @@ export class Venue {
   @Column({ type: 'jsonb', nullable: true })
   hours?: any;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone?: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  website?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  socialMedia?: {
+    // Social networks
+    facebook?: string;
+    instagram?: string;
+    twitter?: string;
+    // Messengers (very popular in CIS countries)
+    telegram?: string; // Telegram username or link
+    whatsapp?: string; // WhatsApp phone number or link
+    viber?: string; // Viber phone number or link
+    messenger?: string; // Facebook Messenger link
+  };
+
   @Column({
     type: 'varchar',
     length: 20,
