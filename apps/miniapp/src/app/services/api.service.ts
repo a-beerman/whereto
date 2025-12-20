@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Plan, CreatePlanDto, Venue, VoteOption, City } from '../models/types';
 import { TelegramService } from './telegram.service';
+import { environment } from '../../environments/environment';
 
 /**
  * API Service for the miniapp
@@ -18,8 +19,7 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly telegram = inject(TelegramService);
 
-  // TODO: Use environment variable in production
-  private readonly apiUrl = 'http://localhost:3000';
+  private readonly apiUrl = environment.apiUrl;
 
   private getHeaders(): HttpHeaders {
     const initData = this.telegram.getInitData();
