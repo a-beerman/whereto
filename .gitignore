@@ -39,3 +39,5 @@ libs/shared/src/api-client-axios/
 libs/shared/src/api-client-angular/
 openapi.json
 .openapi-generator/
+
+.angular

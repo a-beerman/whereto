@@ -1,0 +1,138 @@
+<div class="min-h-screen bg-telegram-bg p-4">
+  <!-- Progress Bar -->
+  <div class="mb-6">
+    <div class="h-1 bg-telegram-secondaryBg rounded-full overflow-hidden">
+      <div 
+        class="h-full bg-telegram-button transition-all duration-300"
+        [style.width.%]="getStepProgress()">
+      </div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-telegram-text mb-2">
+      {{ getStepTitle() }}
+    </h1>
+    <p class="text-telegram-hint text-sm">
+      Выберите подходящий вариант
+    </p>
+  </div>
+
+  <!-- Error Message -->
+  @if (error()) {
+    <div class="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+      <p class="text-red-500 text-sm">{{ error() }}</p>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-12">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-telegram-button border-t-transparent mb-4"></div>
+      <p class="text-telegram-hint">Создаём план...</p>
+    </div>
+  }
+
+  <!-- Date Selection -->
+  @if (currentStep() === 'date' && !loading()) {
+    <div class="space-y-3">
+      @for (option of dateOptions; track option.value) {
+        <button
+          (click)="selectDate(option.value)"
+          class="w-full card hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-between p-5">
+          <div class="flex items-center space-x-4">
+            <span class="text-3xl">{{ option.icon }}</span>
+            <span class="text-lg font-semibold text-telegram-text">{{ option.label }}</span>
+          </div>
+          <svg class="w-6 h-6 text-telegram-hint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Time Selection -->
+  @if (currentStep() === 'time' && !loading()) {
+    <div class="grid grid-cols-2 gap-3">
+      @for (option of timeOptions; track option.value) {
+        <button
+          (click)="selectTime(option.value)"
+          class="card hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 p-6">
+          <div class="text-center">
+            <div class="text-2xl font-bold text-telegram-text mb-1">{{ option.label }}</div>
+            <div class="text-xs text-telegram-hint">{{ option.period }}</div>
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Area Selection -->
+  @if (currentStep() === 'area' && !loading()) {
+    <div class="space-y-3">
+      @for (option of areaOptions; track option.value) {
+        <button
+          (click)="selectArea(option.value)"
+          class="w-full card hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 flex items-center justify-between p-5">
+          <div class="flex items-center space-x-4">
+            <span class="text-3xl">{{ option.icon }}</span>
+            <span class="text-lg font-semibold text-telegram-text">{{ option.label }}</span>
+          </div>
+          <svg class="w-6 h-6 text-telegram-hint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Budget Selection -->
+  @if (currentStep() === 'budget' && !loading()) {
+    <div class="space-y-3">
+      @for (option of budgetOptions; track option.value) {
+        <button
+          (click)="selectBudget(option.value)"
+          class="w-full card hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <span class="text-3xl">{{ option.icon }}</span>
+              <div class="text-left">
+                <div class="text-lg font-bold text-telegram-text">{{ option.label }}</div>
+                <div class="text-sm text-telegram-hint">{{ option.description }}</div>
+              </div>
+            </div>
+            <svg class="w-6 h-6 text-telegram-hint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Format Selection -->
+  @if (currentStep() === 'format' && !loading()) {
+    <div class="space-y-3">
+      @for (option of formatOptions; track option.value) {
+        <button
+          (click)="selectFormat(option.value)"
+          class="w-full card hover:shadow-lg hover:scale-[1.02] active:scale-95 transition-all duration-200 p-5">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4">
+              <span class="text-3xl">{{ option.icon }}</span>
+              <div class="text-left">
+                <div class="text-lg font-bold text-telegram-text">{{ option.label }}</div>
+                <div class="text-sm text-telegram-hint">{{ option.description }}</div>
+              </div>
+            </div>
+            <svg class="w-6 h-6 text-telegram-hint" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </div>
+        </button>
+      }
+    </div>
+  }
+</div>
