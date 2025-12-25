@@ -1,0 +1,149 @@
+<div class="min-h-screen bg-telegram-bg flex flex-col">
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex-1 flex flex-col items-center justify-center px-4">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-telegram-button border-t-transparent mb-4"></div>
+      <p class="text-telegram-hint text-center">Загружаем результаты...</p>
+    </div>
+  }
+
+  <!-- Error Message -->
+  @if (error() && !loading()) {
+    <div class="flex-1 flex items-center justify-center px-4">
+      <div class="card p-6 max-w-md">
+        <div class="text-6xl text-center mb-4">😕</div>
+        <p class="text-telegram-text text-center text-lg">{{ error() }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- Winner Display -->
+  @if (winner() && !loading() && !error()) {
+    <!-- Celebration Header -->
+    <div class="bg-gradient-to-b from-telegram-button/20 to-transparent p-8 text-center">
+      <div class="text-7xl mb-4 animate-bounce">🏆</div>
+      <h1 class="text-3xl font-bold text-telegram-text mb-2">Победитель!</h1>
+      <p class="text-telegram-hint">Вот куда мы идём:</p>
+    </div>
+
+    <!-- Winner Card -->
+    <div class="px-4 pb-6 flex-1">
+      <div class="card p-6 shadow-2xl">
+        <h2 class="text-2xl font-bold text-telegram-text mb-4">
+          {{ winner()!.venue.name }}
+        </h2>
+
+        @if (winner()!.venue.rating) {
+          <div class="flex items-center mb-4">
+            <span class="text-yellow-500 text-2xl mr-2">⭐</span>
+            <span class="text-xl font-bold text-telegram-text">{{ winner()!.venue.rating }}</span>
+            @if (winner()!.venue.ratingCount) {
+              <span class="text-sm text-telegram-hint ml-2">({{ winner()!.venue.ratingCount }} отзывов)</span>
+            }
+          </div>
+        }
+
+        <!-- Address -->
+        <div class="flex items-start mb-4 p-4 bg-telegram-bg rounded-xl">
+          <span class="text-2xl mr-3">📍</span>
+          <div>
+            <p class="text-telegram-text font-medium">{{ winner()!.venue.address }}</p>
+          </div>
+        </div>
+
+        <!-- Date & Time -->
+        @if (plan()) {
+          <div class="space-y-3 mb-6">
+            <div class="flex items-center p-4 bg-telegram-bg rounded-xl">
+              <span class="text-2xl mr-3">📅</span>
+              <div>
+                <p class="text-sm text-telegram-hint">Дата</p>
+                <p class="text-telegram-text font-semibold">{{ formatDate(plan()!.date) }}</p>
+              </div>
+            </div>
+            
+            <div class="flex items-center p-4 bg-telegram-bg rounded-xl">
+              <span class="text-2xl mr-3">🕐</span>
+              <div>
+                <p class="text-sm text-telegram-hint">Время</p>
+                <p class="text-telegram-text font-semibold">{{ plan()!.time }}</p>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Categories -->
+        @if (winner()!.venue.categories && winner()!.venue.categories!.length > 0) {
+          <div class="mb-6">
+            <div class="flex flex-wrap gap-2">
+              @for (category of winner()!.venue.categories!; track category) {
+                <span class="px-3 py-2 bg-telegram-button/10 text-telegram-button text-sm font-medium rounded-full">
+                  {{ category }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            (click)="openInMaps()"
+            class="btn-primary flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Маршрут
+          </button>
+
+          <button
+            (click)="shareLocation()"
+            class="btn-secondary flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+            </svg>
+            Поделиться
+          </button>
+        </div>
+
+        <!-- Contact Info -->
+        @if (winner()!.venue.phone || winner()!.venue.website) {
+          <div class="mt-6 pt-6 border-t border-telegram-hint/20">
+            <p class="text-sm text-telegram-hint mb-3">Контакты:</p>
+            <div class="space-y-2">
+              @if (winner()!.venue.phone) {
+                <a 
+                  [href]="'tel:' + winner()!.venue.phone"
+                  class="flex items-center text-telegram-link hover:underline">
+                  <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+                  </svg>
+                  {{ winner()!.venue.phone }}
+                </a>
+              }
+              @if (winner()!.venue.website) {
+                <a 
+                  [href]="winner()!.venue.website"
+                  target="_blank"
+                  class="flex items-center text-telegram-link hover:underline">
+                  <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path>
+                  </svg>
+                  Веб-сайт
+                </a>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Success Message -->
+      <div class="mt-6 text-center">
+        <p class="text-telegram-hint text-sm">
+          🎉 План создан успешно! До встречи!
+        </p>
+      </div>
+    </div>
+  }
+</div>

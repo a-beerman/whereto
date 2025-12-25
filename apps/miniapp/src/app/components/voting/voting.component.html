@@ -1,0 +1,141 @@
+<div class="min-h-screen bg-telegram-bg pb-20">
+  <!-- Header with Plan Info -->
+  @if (plan()) {
+    <div class="bg-telegram-secondaryBg p-6 mb-4 shadow-md">
+      <h1 class="text-2xl font-bold text-telegram-text mb-3">🗳️ Голосование</h1>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-center text-telegram-text">
+          <span class="mr-2">📅</span>
+          <span>{{ formatDate(plan()!.date) }} в {{ plan()!.time }}</span>
+        </div>
+        @if (plan()!.area && plan()!.area !== 'any') {
+          <div class="flex items-center text-telegram-text">
+            <span class="mr-2">📍</span>
+            <span>{{ plan()!.area === 'center' ? 'Центр города' : plan()!.area }}</span>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-16 px-4">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-telegram-button border-t-transparent mb-4"></div>
+      <p class="text-telegram-hint text-center">Загружаем варианты...</p>
+    </div>
+  }
+
+  <!-- Error Message -->
+  @if (error() && !loading()) {
+    <div class="mx-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+      <p class="text-red-500 text-center">{{ error() }}</p>
+    </div>
+  }
+
+  <!-- Venue List -->
+  @if (!loading() && !error()) {
+    <div class="px-4">
+      <div class="mb-4">
+        <h2 class="text-lg font-semibold text-telegram-text mb-1">Выберите заведение</h2>
+        <p class="text-sm text-telegram-hint">Нажмите на карточку, чтобы проголосовать</p>
+      </div>
+
+      <div class="space-y-3">
+        @for (option of venues(); track option.venueId) {
+          <button
+            (click)="toggleVote(option.venueId)"
+            [class.ring-2]="isVoted(option.venueId)"
+            [class.ring-telegram-button]="isVoted(option.venueId)"
+            [class.bg-telegram-button/5]="isVoted(option.venueId)"
+            class="w-full card hover:shadow-xl transition-all duration-200 p-4 text-left relative overflow-hidden">
+            
+            <!-- Vote indicator -->
+            @if (isVoted(option.venueId)) {
+              <div class="absolute top-4 right-4 w-8 h-8 bg-telegram-button rounded-full flex items-center justify-center">
+                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+                </svg>
+              </div>
+            }
+
+            <!-- Venue Info -->
+            <div class="pr-12">
+              <h3 class="text-lg font-bold text-telegram-text mb-2">
+                {{ option.venue.name }}
+              </h3>
+              
+              @if (option.venue.rating) {
+                <div class="flex items-center mb-2">
+                  <span class="text-yellow-500 mr-1">⭐</span>
+                  <span class="text-sm font-semibold text-telegram-text">{{ option.venue.rating }}</span>
+                  @if (option.venue.ratingCount) {
+                    <span class="text-xs text-telegram-hint ml-1">({{ option.venue.ratingCount }})</span>
+                  }
+                </div>
+              }
+
+              <p class="text-sm text-telegram-hint line-clamp-2">
+                📍 {{ option.venue.address }}
+              </p>
+
+              @if (option.venue.categories && option.venue.categories.length > 0) {
+                <div class="flex flex-wrap gap-1 mt-3">
+                  @for (category of option.venue.categories.slice(0, 3); track category) {
+                    <span class="px-2 py-1 bg-telegram-button/10 text-telegram-button text-xs rounded-full">
+                      {{ category }}
+                    </span>
+                  }
+                </div>
+              }
+
+              <!-- Vote Count -->
+              @if (option.voteCount && option.voteCount > 0) {
+                <div class="mt-3 pt-3 border-t border-telegram-hint/20">
+                  <div class="flex items-center justify-between text-sm">
+                    <span class="text-telegram-hint">Голосов: {{ option.voteCount }}</span>
+                    <div class="flex items-center">
+                      <div class="w-24 h-2 bg-telegram-hint/20 rounded-full overflow-hidden mr-2">
+                        <div 
+                          class="h-full bg-telegram-button transition-all duration-300"
+                          [style.width.%]="getVotePercentage(option)">
+                        </div>
+                      </div>
+                      <span class="text-telegram-text font-semibold">{{ getVotePercentage(option) }}%</span>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          </button>
+        }
+
+        @if (venues().length === 0) {
+          <div class="text-center py-12">
+            <div class="text-6xl mb-4">🏪</div>
+            <p class="text-telegram-hint">Варианты ещё генерируются...</p>
+            <p class="text-sm text-telegram-hint mt-2">Попробуйте обновить через несколько секунд</p>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Info Footer -->
+  @if (!loading() && !error() && venues().length > 0) {
+    <div class="fixed bottom-0 left-0 right-0 bg-telegram-secondaryBg border-t border-telegram-hint/10 p-4">
+      <div class="flex items-center justify-center text-sm text-telegram-hint">
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+        </svg>
+        <span>
+          @if (isCreator()) {
+            Нажмите "Закрыть голосование" когда все проголосуют
+          } @else {
+            Вы можете изменить свой выбор в любой момент
+          }
+        </span>
+      </div>
+    </div>
+  }
+</div>
