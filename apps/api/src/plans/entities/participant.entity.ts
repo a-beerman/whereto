@@ -19,7 +19,6 @@ export class Participant {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
@@ -27,7 +26,6 @@ export class Participant {
   plan!: Plan;
 
   @Column({ type: 'varchar', length: 255 })
-  @Index()
   userId!: string; // Telegram user ID
 
   @Column({ type: 'jsonb', nullable: true })

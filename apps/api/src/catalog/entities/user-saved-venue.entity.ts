@@ -19,7 +19,6 @@ export class UserSavedVenue {
   id!: string;
 
   @Column({ type: 'varchar', length: 255 })
-  @Index()
   userId!: string; // Telegram user ID or UUID
 
   @Column({ type: 'uuid' })

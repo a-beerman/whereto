@@ -25,7 +25,6 @@ export class Venue {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   cityId!: string;
 
   @ManyToOne(() => City, { onDelete: 'CASCADE' })

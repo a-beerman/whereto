@@ -21,7 +21,6 @@ export class Vote {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })

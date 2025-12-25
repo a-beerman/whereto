@@ -23,18 +23,15 @@ export class Plan {
   id!: string;
 
   @Column({ type: 'bigint' })
-  @Index()
   telegramChatId!: number; // Telegram group chat ID
 
   @Column({ type: 'varchar', length: 255 })
-  @Index()
   initiatorId!: string; // Telegram user ID
 
   @Column({ type: 'uuid', nullable: true })
   cityId?: string; // City ID for venue search
 
   @Column({ type: 'date' })
-  @Index()
   date!: Date;
 
   @Column({ type: 'time' })

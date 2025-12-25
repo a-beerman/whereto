@@ -23,7 +23,6 @@ export class VoteCast {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   voteId!: string;
 
   @ManyToOne(() => Vote, { onDelete: 'CASCADE' })
@@ -31,7 +30,6 @@ export class VoteCast {
   vote!: Vote;
 
   @Column({ type: 'uuid' })
-  @Index()
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
@@ -39,11 +37,9 @@ export class VoteCast {
   plan!: Plan;
 
   @Column({ type: 'varchar', length: 255 })
-  @Index()
   userId!: string; // Telegram user ID
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @ManyToOne(() => Venue)

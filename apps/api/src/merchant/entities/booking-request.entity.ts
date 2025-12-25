@@ -22,7 +22,6 @@ export class BookingRequest {
   id!: string;
 
   @Column({ type: 'uuid' })
-  @Index()
   planId!: string;
 
   @ManyToOne(() => Plan, { onDelete: 'CASCADE' })
@@ -30,7 +29,6 @@ export class BookingRequest {
   plan!: Plan;
 
   @Column({ type: 'uuid' })
-  @Index()
   venueId!: string;
 
   @ManyToOne(() => Venue)
@@ -38,7 +36,6 @@ export class BookingRequest {
   venue!: Venue;
 
   @Column({ type: 'date' })
-  @Index()
   requestedDate!: Date;
 
   @Column({ type: 'time' })
@@ -70,7 +67,6 @@ export class BookingRequest {
   responseTimeSeconds?: number; // Time from request to merchant response
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  @Index()
   merchantUserId?: string; // Merchant who responded
 
   @CreateDateColumn({ type: 'timestamptz' })
