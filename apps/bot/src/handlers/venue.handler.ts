@@ -44,18 +44,42 @@ export class VenueHandler {
         isPartner,
       );
 
-      // Get photo URL (prefer photoUrls, fallback to photoRefs)
-      const photoUrl = venue.photoUrls?.[0] || venue.photoRefs?.[0];
+      // Get all photo URLs (prefer photoUrls, fallback to photoRefs)
+      const photoUrls = venue.photoUrls || venue.photoRefs || [];
+      const validPhotoUrls = photoUrls.filter((url: string) => url && url.startsWith('http'));
 
-      if (photoUrl && photoUrl.startsWith('http')) {
-        // Send photo with caption
+      if (validPhotoUrls.length > 0) {
         const caption = formatVenueCaption(venue);
+
         try {
-          await ctx.replyWithPhoto(photoUrl, {
-            caption,
-            parse_mode: 'Markdown',
-            reply_markup: keyboard,
-          });
+          if (validPhotoUrls.length === 1) {
+            // Single photo - send with caption and buttons
+            await ctx.replyWithPhoto(validPhotoUrls[0], {
+              caption,
+              parse_mode: 'Markdown',
+              reply_markup: keyboard,
+            });
+          } else {
+            // Multiple photos - send as Media Group (carousel)
+            // Limit to 3 photos for better UX
+            const photosToSend = validPhotoUrls.slice(0, 3);
+
+            // Create media group: first photo has caption, others don't
+            const mediaGroup = photosToSend.map((url: string, index: number) => ({
+              type: 'photo' as const,
+              media: url,
+              caption: index === 0 ? caption : undefined, // Only first photo has caption
+              parse_mode: index === 0 ? 'Markdown' : undefined,
+            }));
+
+            // Send media group
+            await ctx.replyWithMediaGroup(mediaGroup);
+
+            // Send buttons as separate message (Media Group doesn't support reply_markup on individual items)
+            await ctx.reply('Выберите действие:', {
+              reply_markup: keyboard,
+            });
+          }
         } catch (photoError) {
           // If photo fails, fallback to text
           console.error('Failed to send photo, falling back to text:', photoError);
