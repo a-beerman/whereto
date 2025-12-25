@@ -12,11 +12,14 @@
       "options": {
         "outputPath": "dist/apps/miniapp",
         "browser": "apps/miniapp/src/main.ts",
+        "index": "apps/miniapp/src/index.html",
         "tsConfig": "apps/miniapp/tsconfig.app.json",
+        "inlineStyleLanguage": "css",
         "assets": [
           {
             "glob": "**/*",
-            "input": "apps/miniapp/public"
+            "input": "apps/miniapp/public",
+            "output": "/"
           }
         ],
         "styles": ["apps/miniapp/src/styles.css"]
@@ -46,7 +49,6 @@
       "defaultConfiguration": "production"
     },
     "serve": {
-      "continuous": true,
       "executor": "@angular/build:dev-server",
       "configurations": {
         "production": {

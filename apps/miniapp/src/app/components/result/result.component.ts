@@ -1,25 +1,30 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import { ApiService } from '../../services/api.service';
-import { Plan, VoteOption } from '../../models/types';
+import {
+  PlansService,
+  PlansControllerGetPlanDetails200ResponseData,
+} from '@whereto/shared/api-client-angular';
+import { VoteOption } from '../../models/types';
 
 @Component({
   selector: 'app-result',
   standalone: true,
   imports: [CommonModule],
+  providers: [DatePipe],
   templateUrl: './result.component.html',
   styleUrls: ['./result.component.css'],
 })
 export class ResultComponent implements OnInit {
   private readonly telegram = inject(TelegramService);
-  private readonly api = inject(ApiService);
+  private readonly plans = inject(PlansService);
   private readonly route = inject(ActivatedRoute);
+  private readonly datePipe = inject(DatePipe);
 
   loading = signal(true);
   error = signal<string | null>(null);
-  plan = signal<Plan | null>(null);
+  plan = signal<PlansControllerGetPlanDetails200ResponseData | null>(null);
   winner = signal<VoteOption | null>(null);
 
   ngOnInit() {
@@ -30,23 +35,16 @@ export class ResultComponent implements OnInit {
       return;
     }
 
-    this.api.getPlan(planId).subscribe({
-      next: (plan) => {
-        this.plan.set(plan);
-
-        if (plan.winningVenueId) {
-          this.api.getVenue(plan.winningVenueId).subscribe({
-            next: (venue) => {
-              this.winner.set({ venueId: venue.id, venue });
-              this.loading.set(false);
-            },
-            error: () => {
-              this.error.set('Ошибка загрузки победителя');
-              this.loading.set(false);
-            },
-          });
+    this.plans.plansControllerGetPlanDetails(planId).subscribe({
+      next: (response) => {
+        const plan = response.data;
+        if (plan) {
+          this.plan.set(plan);
+          // Note: The actual winner/venue info needs to be retrieved based on votes
+          // since PlansControllerGetPlanDetails200ResponseData only has id, date, time, status, etc.
+          this.loading.set(false);
         } else {
-          this.error.set('Победитель ещё не определён');
+          this.error.set('Ошибка загрузки плана');
           this.loading.set(false);
         }
       },
@@ -57,35 +55,6 @@ export class ResultComponent implements OnInit {
     });
 
     this.telegram.showMainButton('Готово', () => this.telegram.close());
-  }
-
-  formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    const days = [
-      'Воскресенье',
-      'Понедельник',
-      'Вторник',
-      'Среда',
-      'Четверг',
-      'Пятница',
-      'Суббота',
-    ];
-    const months = [
-      'января',
-      'февраля',
-      'марта',
-      'апреля',
-      'мая',
-      'июня',
-      'июля',
-      'августа',
-      'сентября',
-      'октября',
-      'ноября',
-      'декабря',
-    ];
-
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
   }
 
   openInMaps() {
@@ -106,9 +75,10 @@ export class ResultComponent implements OnInit {
     const venue = this.winner()?.venue;
     const plan = this.plan();
 
-    if (!venue || !plan) return;
+    if (!venue || !plan || !plan.date) return;
 
-    const message = `🎉 Мы встречаемся!\n\n📍 ${venue.name}\n${venue.address}\n\n📅 ${this.formatDate(plan.date)}\n🕐 ${plan.time}`;
+    const formattedDate = this.datePipe.transform(plan.date, 'EEEE, d MMMM') ?? plan.date;
+    const message = `🎉 Мы встречаемся!\n\n📍 ${venue.name}\n${venue.address}\n\n📅 ${formattedDate}\n🕐 ${plan.time || ''}`;
 
     if (navigator.share) {
       navigator.share({ title: 'План встречи', text: message });

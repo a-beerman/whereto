@@ -13,6 +13,47 @@
       "options": {
         "jestConfig": "libs/shared/jest.config.ts"
       }
+    },
+    "generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          {
+            "command": "npx nx run shared:generate:angular"
+          },
+          {
+            "command": "npx nx run shared:generate:axios"
+          }
+        ]
+      }
+    },
+    "generate:angular": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rm -rf libs/shared/src/api-client-angular && npx @openapitools/openapi-generator-cli generate -i http://localhost:3000/docs-json -g typescript-angular -o libs/shared/src/api-client-angular -c openapitools.json --skip-validate-spec"
+      }
+    },
+    "generate:axios": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "rm -rf libs/shared/src/api-client-axios && npx @openapitools/openapi-generator-cli generate -i http://localhost:3000/docs-json -g typescript-axios -o libs/shared/src/api-client-axios -c openapitools.json --skip-validate-spec"
+      }
+    },
+    "update": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "npx @openapitools/openapi-generator-cli version-manager set 7.17.0"
+      }
+    },
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/libs/shared",
+        "main": "libs/shared/src/index.ts",
+        "tsConfig": "libs/shared/tsconfig.lib.json",
+        "assets": ["libs/shared/*.md"]
+      }
     }
   },
   "tags": ["type:lib", "scope:shared"]

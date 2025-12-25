@@ -1,0 +1,21 @@
+# WhereTo AI Agent Guide
+
+- Start planning from [docs/FINAL-SPEC.md](docs/FINAL-SPEC.md) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); catalog schema and rules live in [docs/CATALOG-RU.md](docs/CATALOG-RU.md); broader docs index in [docs/README.md](docs/README.md).
+- Monorepo (Nx): [apps/api](apps/api) NestJS BFF, [apps/bot](apps/bot) Telegraf bot, [apps/miniapp](apps/miniapp) Angular 21 miniapp, [libs/shared](libs/shared) shared types/constants/OpenAPI clients.
+- Core principle: **offline catalog**. All user-facing reads go to Postgres/PostGIS; Google Places is used only by ingestion jobs. Never call external APIs inside request handlers.
+- Catalog flow: ingestion → normalize → dedup (source id → geo+name → address) → upsert (`Venue`, `VenueSource`) → apply overrides. User flow: bot/miniapp → API → catalog DB.
+- Override rule: always apply overrides before returning venue data; statuses: active/hidden/duplicate; keep geo queries indexed.
+- Commands (prefer Nx): `npm run dev` (api+bot+miniapp), `nx serve api`, `nx serve bot`, `nx serve miniapp`, `nx build <project>`, `nx test <project>`, `nx lint <project>`; root scripts mirror these.
+- API patterns: modules/controllers/services under [apps/api/src](apps/api/src); DTOs with class-validator; TypeORM with PostGIS; use query builder for complex filters; custom exceptions for user errors.
+- Bot patterns: handlers in [apps/bot/src/handlers](apps/bot/src/handlers); main wiring in [apps/bot/src/main.ts](apps/bot/src/main.ts); no live Google calls—always rely on API/catalog.
+- Miniapp patterns: Angular standalone + signals + Tailwind; Telegram integration in [apps/miniapp/src/app/services/telegram.service.ts](apps/miniapp/src/app/services/telegram.service.ts); wizard/voting components under [apps/miniapp/src/app/components](apps/miniapp/src/app/components); keep mobile-first UX.
+- Shared clients: generate OpenAPI clients after API is running via `npm run generate:api-client` (angular + axios) or refresh spec with `npm run swagger:export`; outputs go to [libs/shared/src/api-client-angular](libs/shared/src/api-client-angular) and [libs/shared/src/api-client-axios](libs/shared/src/api-client-axios).
+- Env/setup: create per-service env files (see [docs/DEVELOPMENT-SETUP.md](docs/DEVELOPMENT-SETUP.md) and [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md)); Postgres with PostGIS required. Migrations/scripts live under [apps/api/src](apps/api/src) and [scripts](scripts).
+- Code style (see [docs/CODE-STYLE.md](docs/CODE-STYLE.md)): strict TS, avoid `any`, explicit return types for public APIs, const assertions for configs, import order external → @whereto → relative, 2-space indent, ~100 char lines.
+- Testing (see [docs/TESTING.md](docs/TESTING.md)): use `nx test <project>`; mock Google APIs; cover dedup, overrides, geo filters, and bot flows; Arrange-Act-Assert with descriptive names.
+- Lint/format: `nx lint <project>`; Prettier config in [.prettierrc](.prettierrc); keep ESLint happy before commit.
+- Data safety checks before merging: no external API calls in user paths, overrides applied, dedup not broken, geo filters indexed, env vars validated, docs updated when flows change.
+- UX notes: bot is primary Phase 1 surface; miniapp is optional but must mirror bot plan/voting flows; B2B cabinet is Phase 2 (avoid implementing now).
+- Performance/observability: track ingestion metrics, search/details latency; avoid N+1 in catalog queries; cache hot reads with short TTL if needed.
+- When unsure about Nx wiring or targets, inspect [nx.json](nx.json) and project configs in [apps/api/project.json](apps/api/project.json), [apps/bot/project.json](apps/bot/project.json), [apps/miniapp/project.json](apps/miniapp/project.json), or use Nx MCP tools.
+- Domain vocabulary to use consistently: City, Venue, VenueSource, VenueOverrides, Plan, Participant, Vote, BookingRequest, VenuePartner.

@@ -3,5 +3,42 @@
   "spaces": 2,
   "generator-cli": {
     "version": "7.17.0"
+  },
+  "generators": {
+    "typescript-angular": {
+      "npmName": "@platinumlab/frontend-api-client",
+      "npmVersion": "1.0.0",
+      "ngVersion": "20.0.1",
+      "supportsES6": true,
+      "typescriptThreePlus": true,
+      "nullSafeAdditionalProps": true,
+      "modelPropertyNaming": "camelCase",
+      "enumPropertyNaming": "UPPERCASE",
+      "snapshot": false,
+      "skipValidateSpec": false,
+      "operationIdNamingConvention": "original",
+      "removeOperationIdPrefix": true,
+      "removeOperationIdPrefixDelimiter": "-",
+      "removeOperationIdPrefixCount": 1,
+      "serviceSuffix": "DataService",
+      "serviceFileSuffix": "-data.service"
+    },
+    "typescript-axios": {
+      "npmName": "@platinumlab/frontend-api-client",
+      "npmVersion": "1.0.0",
+      "supportsES6": true,
+      "typescriptThreePlus": true,
+      "nullSafeAdditionalProps": true,
+      "modelPropertyNaming": "camelCase",
+      "enumPropertyNaming": "UPPERCASE",
+      "snapshot": false,
+      "skipValidateSpec": false,
+      "operationIdNamingConvention": "original",
+      "removeOperationIdPrefix": true,
+      "removeOperationIdPrefixDelimiter": "-",
+      "removeOperationIdPrefixCount": 1,
+      "serviceSuffix": "DataService",
+      "serviceFileSuffix": "-data.service"
+    }
   }
 }

@@ -2,9 +2,8 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import { ApiService } from '../../services/api.service';
+import { CatalogService, PlansService, CreatePlanDto } from '@whereto/shared/api-client-angular';
 import { PlanStateService } from '../../services/plan-state.service';
-import { CreatePlanDto } from '../../models/types';
 
 @Component({
   selector: 'app-plan-create',
@@ -15,7 +14,8 @@ import { CreatePlanDto } from '../../models/types';
 })
 export class PlanCreateComponent implements OnInit, OnDestroy {
   private readonly telegram = inject(TelegramService);
-  private readonly api = inject(ApiService);
+  private readonly catalog = inject(CatalogService);
+  private readonly plans = inject(PlansService);
   private readonly planState = inject(PlanStateService);
   private readonly router = inject(Router);
 
@@ -70,10 +70,16 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.api.getCities().subscribe({
-      next: (cities) => {
+    this.catalog.citiesControllerFindAll().subscribe({
+      next: (response) => {
+        const cities = response.data || [];
         if (cities.length > 0) {
-          this.planState.initialize(cities[0].id, chatId);
+          const cityId = cities[0].id;
+          if (cityId) {
+            this.planState.initialize(cityId, chatId);
+          } else {
+            this.error.set('Ошибка в данных города');
+          }
         } else {
           this.error.set('Нет доступных городов');
         }
@@ -143,14 +149,17 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
       time: state.time,
       cityId: state.cityId,
       area: state.area,
-      budget: state.budget,
+      budget: state.budget as CreatePlanDto.BudgetEnum | undefined,
       format: state.format,
     };
 
-    this.api.createPlan(planData).subscribe({
-      next: (plan) => {
+    this.plans.plansControllerCreatePlan(planData).subscribe({
+      next: (response) => {
         this.loading.set(false);
-        this.router.navigate(['/voting', plan.id]);
+        const plan = response.data;
+        if (plan?.id) {
+          this.router.navigate(['/voting', plan.id]);
+        }
       },
       error: (err) => {
         console.error('Error creating plan:', err);

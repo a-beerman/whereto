@@ -2,8 +2,11 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import { ApiService } from '../../services/api.service';
-import { Plan, VoteOption } from '../../models/types';
+import {
+  PlansService,
+  PlansControllerGetPlanDetails200ResponseData,
+} from '@whereto/shared/api-client-angular';
+import { VoteOption } from '../../models/types';
 
 @Component({
   selector: 'app-voting',
@@ -14,13 +17,13 @@ import { Plan, VoteOption } from '../../models/types';
 })
 export class VotingComponent implements OnInit, OnDestroy {
   private readonly telegram = inject(TelegramService);
-  private readonly api = inject(ApiService);
+  private readonly plans = inject(PlansService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
   loading = signal(true);
   error = signal<string | null>(null);
-  plan = signal<Plan | null>(null);
+  plan = signal<PlansControllerGetPlanDetails200ResponseData | null>(null);
   venues = signal<VoteOption[]>([]);
   userVotes = signal<string[]>([]);
   isCreator = signal(false);
@@ -39,11 +42,14 @@ export class VotingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.api.getPlan(planId).subscribe({
-      next: (plan) => {
-        this.plan.set(plan);
-        this.isCreator.set(plan.initiatorId === user.id.toString());
-        this.startVoting(planId);
+    this.plans.plansControllerGetPlanDetails(planId).subscribe({
+      next: (response) => {
+        const plan = response.data;
+        if (plan) {
+          this.plan.set(plan);
+          this.isCreator.set(plan.initiatorId === user.id.toString());
+          this.startVoting(planId);
+        }
       },
       error: (err) => {
         console.error('Error loading plan:', err);
@@ -62,24 +68,24 @@ export class VotingComponent implements OnInit, OnDestroy {
   }
 
   private startVoting(planId: string) {
-    this.api.startVoting(planId).subscribe({
-      next: (result) => {
-        this.venues.set(result.options || []);
+    this.plans.plansControllerStartVoting(planId).subscribe({
+      next: (response) => {
+        const result = response.data;
+        // Map VenueResponseDto to VoteOption
+        const options =
+          result?.options?.map((venue) => ({
+            venueId: venue.id || '',
+            venue: venue as any,
+          })) || [];
+        this.venues.set(options);
         this.loadUserVotes(planId);
         this.loading.set(false);
       },
       error: (err) => {
-        this.api.getPlanOptions(planId).subscribe({
-          next: (options) => {
-            this.venues.set(options);
-            this.loadUserVotes(planId);
-            this.loading.set(false);
-          },
-          error: () => {
-            this.error.set('Ошибка загрузки вариантов');
-            this.loading.set(false);
-          },
-        });
+        // If voting already started, we still need to load options from another endpoint
+        // For now, just set error
+        this.error.set('Ошибка загрузки вариантов');
+        this.loading.set(false);
       },
     });
   }
@@ -88,8 +94,8 @@ export class VotingComponent implements OnInit, OnDestroy {
     const user = this.telegram.getUserInfo();
     if (!user) return;
 
-    this.api.getUserVotes(planId, user.id.toString()).subscribe({
-      next: (votes) => this.userVotes.set(votes),
+    this.plans.plansControllerGetUserVotes(planId, user.id.toString()).subscribe({
+      next: (response) => this.userVotes.set(response.data || []),
       error: (err) => console.error('Error loading votes:', err),
     });
   }
@@ -104,25 +110,31 @@ export class VotingComponent implements OnInit, OnDestroy {
     const isVoted = currentVotes.includes(venueId);
 
     if (isVoted) {
-      this.api.removeVote(planId, user.id.toString(), venueId).subscribe({
-        next: () => this.userVotes.set(currentVotes.filter((v) => v !== venueId)),
-        error: () => this.telegram.showAlert('Ошибка при удалении голоса'),
-      });
+      this.plans
+        .plansControllerRemoveVote(planId, { userId: user.id.toString(), venueId })
+        .subscribe({
+          next: () => this.userVotes.set(currentVotes.filter((v) => v !== venueId)),
+          error: () => this.telegram.showAlert('Ошибка при удалении голоса'),
+        });
     } else {
-      this.api.castVote(planId, user.id.toString(), venueId).subscribe({
-        next: () => this.userVotes.set([venueId]),
-        error: (err) => {
-          if (err.status === 403) {
-            this.api.joinPlan(planId, user.id.toString()).subscribe({
-              next: () => {
-                this.api.castVote(planId, user.id.toString(), venueId).subscribe({
-                  next: () => this.userVotes.set([venueId]),
-                });
-              },
-            });
-          }
-        },
-      });
+      this.plans
+        .plansControllerCastVote(planId, { userId: user.id.toString(), venueId })
+        .subscribe({
+          next: () => this.userVotes.set([venueId]),
+          error: (err) => {
+            if (err.status === 403) {
+              this.plans.plansControllerJoinPlan(planId, { userId: user.id.toString() }).subscribe({
+                next: () => {
+                  this.plans
+                    .plansControllerCastVote(planId, { userId: user.id.toString(), venueId })
+                    .subscribe({
+                      next: () => this.userVotes.set([venueId]),
+                    });
+                },
+              });
+            }
+          },
+        });
     }
   }
 
@@ -140,7 +152,7 @@ export class VotingComponent implements OnInit, OnDestroy {
       if (!confirmed) return;
 
       this.loading.set(true);
-      this.api.closePlan(planId, user.id.toString()).subscribe({
+      this.plans.plansControllerClosePlan(planId, { initiatorId: user.id.toString() }).subscribe({
         next: () => {
           this.loading.set(false);
           this.router.navigate(['/result', planId]);
@@ -153,25 +165,10 @@ export class VotingComponent implements OnInit, OnDestroy {
     });
   }
 
-  formatDate(dateStr: string): string {
-    const date = new Date(dateStr);
-    const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-    const months = [
-      'янв',
-      'фев',
-      'мар',
-      'апр',
-      'май',
-      'июн',
-      'июл',
-      'авг',
-      'сен',
-      'окт',
-      'ноя',
-      'дек',
-    ];
-
-    return `${days[date.getDay()]}, ${date.getDate()} ${months[date.getMonth()]}`;
+  // Area is not present in the generated client type, so read it defensively.
+  planArea(): string | null {
+    const currentPlan = this.plan() as unknown as { area?: string } | null;
+    return currentPlan?.area ?? null;
   }
 
   getVotePercentage(option: VoteOption): number {

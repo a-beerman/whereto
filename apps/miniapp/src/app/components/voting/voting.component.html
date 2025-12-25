@@ -6,12 +6,12 @@
       <div class="space-y-2 text-sm">
         <div class="flex items-center text-telegram-text">
           <span class="mr-2">📅</span>
-          <span>{{ formatDate(plan()!.date) }} в {{ plan()!.time }}</span>
+          <span>{{ plan()!.date | date:'EEE, d MMM' }} в {{ plan()!.time }}</span>
         </div>
-        @if (plan()!.area && plan()!.area !== 'any') {
+        @if (planArea() && planArea() !== 'any') {
           <div class="flex items-center text-telegram-text">
             <span class="mr-2">📍</span>
-            <span>{{ plan()!.area === 'center' ? 'Центр города' : plan()!.area }}</span>
+            <span>{{ planArea() === 'center' ? 'Центр города' : planArea() }}</span>
           </div>
         }
       </div>

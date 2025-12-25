@@ -74,7 +74,8 @@
     "tsconfig-paths": "^4.2.0",
     "tslib": "^2.3.0",
     "typeorm": "^0.3.28",
-    "typescript": "^5.4.0"
+    "typescript": "~5.9.0",
+    "zone.js": "~0.14.5"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [

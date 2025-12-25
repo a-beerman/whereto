@@ -58,7 +58,7 @@
               <span class="text-2xl mr-3">📅</span>
               <div>
                 <p class="text-sm text-telegram-hint">Дата</p>
-                <p class="text-telegram-text font-semibold">{{ formatDate(plan()!.date) }}</p>
+                <p class="text-telegram-text font-semibold">{{ plan()?.date ? (plan()!.date | date:'EEEE, d MMMM') : '' }}</p>
               </div>
             </div>
             
