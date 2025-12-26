@@ -2,7 +2,9 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import { CatalogService, PlansService, CreatePlanDto } from '@whereto/shared/api-client-angular';
+import { CatalogApiService } from '../../services/catalog-api.service';
+import { PlanApiService } from '../../services/plan-api.service';
+import { CreatePlanDto } from '@whereto/shared/api-client-angular';
 import { PlanStateService } from '../../services/plan-state.service';
 
 @Component({
@@ -14,8 +16,8 @@ import { PlanStateService } from '../../services/plan-state.service';
 })
 export class PlanCreateComponent implements OnInit, OnDestroy {
   private readonly telegram = inject(TelegramService);
-  private readonly catalog = inject(CatalogService);
-  private readonly plans = inject(PlansService);
+  private readonly catalogApi = inject(CatalogApiService);
+  private readonly planApi = inject(PlanApiService);
   private readonly planState = inject(PlanStateService);
   private readonly router = inject(Router);
 
@@ -70,9 +72,8 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.catalog.citiesControllerFindAll().subscribe({
-      next: (response) => {
-        const cities = response.data || [];
+    this.catalogApi.getCities().subscribe({
+      next: (cities) => {
         if (cities.length > 0) {
           const cityId = cities[0].id;
           if (cityId) {
@@ -153,10 +154,9 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
       format: state.format,
     };
 
-    this.plans.plansControllerCreatePlan(planData).subscribe({
-      next: (response) => {
+    this.planApi.createPlan(planData).subscribe({
+      next: (plan) => {
         this.loading.set(false);
-        const plan = response.data;
         if (plan?.id) {
           this.router.navigate(['/voting', plan.id]);
         }

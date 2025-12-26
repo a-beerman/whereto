@@ -2,10 +2,8 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import {
-  PlansService,
-  PlansControllerGetPlanDetails200ResponseData,
-} from '@whereto/shared/api-client-angular';
+import { PlanApiService } from '../../services/plan-api.service';
+import { PlansControllerGetPlanDetails200ResponseData } from '@whereto/shared/api-client-angular';
 import { VoteOption } from '../../models/types';
 
 @Component({
@@ -17,7 +15,7 @@ import { VoteOption } from '../../models/types';
 })
 export class VotingComponent implements OnInit, OnDestroy {
   private readonly telegram = inject(TelegramService);
-  private readonly plans = inject(PlansService);
+  private readonly planApi = inject(PlanApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
 
@@ -42,9 +40,8 @@ export class VotingComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.plans.plansControllerGetPlanDetails(planId).subscribe({
-      next: (response) => {
-        const plan = response.data;
+    this.planApi.getPlanDetails(planId).subscribe({
+      next: (plan) => {
         if (plan) {
           this.plan.set(plan);
           this.isCreator.set(plan.initiatorId === user.id.toString());
@@ -68,9 +65,8 @@ export class VotingComponent implements OnInit, OnDestroy {
   }
 
   private startVoting(planId: string) {
-    this.plans.plansControllerStartVoting(planId).subscribe({
-      next: (response) => {
-        const result = response.data;
+    this.planApi.startVoting(planId).subscribe({
+      next: (result) => {
         // Map VenueResponseDto to VoteOption
         const options =
           result?.options?.map((venue) => ({
@@ -94,8 +90,8 @@ export class VotingComponent implements OnInit, OnDestroy {
     const user = this.telegram.getUserInfo();
     if (!user) return;
 
-    this.plans.plansControllerGetUserVotes(planId, user.id.toString()).subscribe({
-      next: (response) => this.userVotes.set(response.data || []),
+    this.planApi.getUserVotes(planId, user.id.toString()).subscribe({
+      next: (votes) => this.userVotes.set(votes),
       error: (err) => console.error('Error loading votes:', err),
     });
   }
@@ -110,31 +106,25 @@ export class VotingComponent implements OnInit, OnDestroy {
     const isVoted = currentVotes.includes(venueId);
 
     if (isVoted) {
-      this.plans
-        .plansControllerRemoveVote(planId, { userId: user.id.toString(), venueId })
-        .subscribe({
-          next: () => this.userVotes.set(currentVotes.filter((v) => v !== venueId)),
-          error: () => this.telegram.showAlert('Ошибка при удалении голоса'),
-        });
+      this.planApi.removeVote(planId, user.id.toString(), venueId).subscribe({
+        next: () => this.userVotes.set(currentVotes.filter((v) => v !== venueId)),
+        error: () => this.telegram.showAlert('Ошибка при удалении голоса'),
+      });
     } else {
-      this.plans
-        .plansControllerCastVote(planId, { userId: user.id.toString(), venueId })
-        .subscribe({
-          next: () => this.userVotes.set([venueId]),
-          error: (err) => {
-            if (err.status === 403) {
-              this.plans.plansControllerJoinPlan(planId, { userId: user.id.toString() }).subscribe({
-                next: () => {
-                  this.plans
-                    .plansControllerCastVote(planId, { userId: user.id.toString(), venueId })
-                    .subscribe({
-                      next: () => this.userVotes.set([venueId]),
-                    });
-                },
-              });
-            }
-          },
-        });
+      this.planApi.castVote(planId, user.id.toString(), venueId).subscribe({
+        next: () => this.userVotes.set([venueId]),
+        error: (err) => {
+          if (err.status === 403) {
+            this.planApi.joinPlan(planId, user.id.toString()).subscribe({
+              next: () => {
+                this.planApi.castVote(planId, user.id.toString(), venueId).subscribe({
+                  next: () => this.userVotes.set([venueId]),
+                });
+              },
+            });
+          }
+        },
+      });
     }
   }
 
@@ -152,7 +142,7 @@ export class VotingComponent implements OnInit, OnDestroy {
       if (!confirmed) return;
 
       this.loading.set(true);
-      this.plans.plansControllerClosePlan(planId, { initiatorId: user.id.toString() }).subscribe({
+      this.planApi.closePlan(planId, user.id.toString()).subscribe({
         next: () => {
           this.loading.set(false);
           this.router.navigate(['/result', planId]);

@@ -2,10 +2,8 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
-import {
-  PlansService,
-  PlansControllerGetPlanDetails200ResponseData,
-} from '@whereto/shared/api-client-angular';
+import { PlanApiService } from '../../services/plan-api.service';
+import { PlansControllerGetPlanDetails200ResponseData } from '@whereto/shared/api-client-angular';
 import { VoteOption } from '../../models/types';
 
 @Component({
@@ -18,7 +16,7 @@ import { VoteOption } from '../../models/types';
 })
 export class ResultComponent implements OnInit {
   private readonly telegram = inject(TelegramService);
-  private readonly plans = inject(PlansService);
+  private readonly planApi = inject(PlanApiService);
   private readonly route = inject(ActivatedRoute);
   private readonly datePipe = inject(DatePipe);
 
@@ -35,9 +33,8 @@ export class ResultComponent implements OnInit {
       return;
     }
 
-    this.plans.plansControllerGetPlanDetails(planId).subscribe({
-      next: (response) => {
-        const plan = response.data;
+    this.planApi.getPlanDetails(planId).subscribe({
+      next: (plan) => {
         if (plan) {
           this.plan.set(plan);
           // Note: The actual winner/venue info needs to be retrieved based on votes
