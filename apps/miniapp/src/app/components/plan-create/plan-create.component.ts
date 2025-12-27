@@ -68,8 +68,18 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
     const chatId = this.telegram.getChatId();
 
     if (!user) {
-      this.error.set('Не удалось получить информацию о пользователе');
-      return;
+      // If not running inside Telegram, allow mock mode for browser debugging
+      if (!this.telegram.isInTelegram() && this.telegram.isMock()) {
+        // Proceed with mocked user; no error
+      } else {
+        // Guide the user to open via Telegram
+        if (!this.telegram.isInTelegram()) {
+          this.error.set('Откройте мини‑приложение из Telegram через кнопку /miniapp');
+        } else {
+          this.error.set('Не удалось получить информацию о пользователе');
+        }
+        return;
+      }
     }
 
     this.catalogApi.getCities().subscribe({
@@ -134,6 +144,12 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
   private createPlan() {
     const state = this.planState.getCurrentState();
     const user = this.telegram.getUserInfo();
+
+    // Guard: ensure running inside Telegram WebApp
+    if (!this.telegram.isInTelegram() && !this.telegram.isMock()) {
+      this.error.set('Откройте мини‑приложение из Telegram через кнопку /miniapp');
+      return;
+    }
 
     if (!user || !state.date || !state.time || !state.cityId) {
       this.error.set('Недостаточно данных для создания плана');

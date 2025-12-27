@@ -3,13 +3,17 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
 import { PlanApiService } from '../../services/plan-api.service';
-import { PlansControllerGetPlanDetails200ResponseData } from '@whereto/shared/api-client-angular';
-import { VoteOption } from '../../models/types';
+import {
+  PlansGetPlanDetails200ResponseData,
+  VenueResponseDto,
+} from '@whereto/shared/api-client-angular';
+import { VoteOption, Venue } from '../../models/types';
+import { VenueCardComponent } from '../venue-card/venue-card.component';
 
 @Component({
   selector: 'app-voting',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, VenueCardComponent],
   templateUrl: './voting.component.html',
   styleUrls: ['./voting.component.css'],
 })
@@ -21,7 +25,7 @@ export class VotingComponent implements OnInit, OnDestroy {
 
   loading = signal(true);
   error = signal<string | null>(null);
-  plan = signal<PlansControllerGetPlanDetails200ResponseData | null>(null);
+  plan = signal<PlansGetPlanDetails200ResponseData | null>(null);
   venues = signal<VoteOption[]>([]);
   userVotes = signal<string[]>([]);
   isCreator = signal(false);
@@ -67,12 +71,33 @@ export class VotingComponent implements OnInit, OnDestroy {
   private startVoting(planId: string) {
     this.planApi.startVoting(planId).subscribe({
       next: (result) => {
-        // Map VenueResponseDto to VoteOption
+        // Map VenueResponseDto to VoteOption with proper Venue format
         const options =
-          result?.options?.map((venue) => ({
-            venueId: venue.id || '',
-            venue: venue as any,
-          })) || [];
+          result?.options?.map((venueDto: VenueResponseDto) => {
+            const venue: Venue = {
+              id: venueDto.id,
+              name: venueDto.name,
+              address: venueDto.address,
+              rating: venueDto.rating,
+              ratingCount: venueDto.ratingCount,
+              categories: venueDto.categories,
+              location:
+                venueDto.lat && venueDto.lng
+                  ? {
+                      type: 'Point',
+                      coordinates: [venueDto.lng, venueDto.lat] as [number, number],
+                    }
+                  : undefined,
+              photoUrls: venueDto.photoUrls,
+              phone: venueDto.phone,
+              website: venueDto.website,
+            };
+            return {
+              venueId: venue.id,
+              venue,
+              voteCount: 0, // Will be updated when votes are loaded
+            };
+          }) || [];
         this.venues.set(options);
         this.loadUserVotes(planId);
         this.loading.set(false);
@@ -102,26 +127,45 @@ export class VotingComponent implements OnInit, OnDestroy {
 
     if (!planId || !user) return;
 
+    // Haptic feedback
+    this.telegram.hapticFeedback('selection');
+
     const currentVotes = this.userVotes();
     const isVoted = currentVotes.includes(venueId);
 
     if (isVoted) {
       this.planApi.removeVote(planId, user.id.toString(), venueId).subscribe({
-        next: () => this.userVotes.set(currentVotes.filter((v) => v !== venueId)),
-        error: () => this.telegram.showAlert('Ошибка при удалении голоса'),
+        next: () => {
+          this.userVotes.set(currentVotes.filter((v) => v !== venueId));
+          this.telegram.hapticFeedback('impact', 'light');
+        },
+        error: () => {
+          this.telegram.showAlert('Ошибка при удалении голоса');
+          this.telegram.hapticFeedback('notification', 'heavy');
+        },
       });
     } else {
       this.planApi.castVote(planId, user.id.toString(), venueId).subscribe({
-        next: () => this.userVotes.set([venueId]),
+        next: () => {
+          this.userVotes.set([venueId]);
+          this.telegram.hapticFeedback('impact', 'medium');
+        },
         error: (err) => {
           if (err.status === 403) {
             this.planApi.joinPlan(planId, user.id.toString()).subscribe({
               next: () => {
                 this.planApi.castVote(planId, user.id.toString(), venueId).subscribe({
-                  next: () => this.userVotes.set([venueId]),
+                  next: () => {
+                    this.userVotes.set([venueId]);
+                    this.telegram.hapticFeedback('impact', 'medium');
+                  },
                 });
               },
             });
+          } else {
+            const msg = (err && (err.message || err.error?.message)) || 'Ошибка при голосовании';
+            this.telegram.showAlert(msg);
+            this.telegram.hapticFeedback('notification', 'heavy');
           }
         },
       });

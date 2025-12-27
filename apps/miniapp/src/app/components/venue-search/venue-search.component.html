@@ -1,0 +1,129 @@
+<div class="min-h-screen bg-telegram-bg pb-20">
+  <!-- Header -->
+  <div class="bg-telegram-secondaryBg p-4 mb-4 shadow-md sticky top-0 z-10">
+    <h1 class="text-2xl font-bold text-telegram-text mb-4">🔍 Поиск заведений</h1>
+    
+    <!-- Search Input -->
+    <div class="relative mb-3">
+      <input
+        type="text"
+        (input)="onSearchInput($event)"
+        [value]="searchQuery()"
+        placeholder="Название заведения..."
+        class="input-field w-full pl-10" />
+      <svg
+        class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-telegram-hint"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+
+    <!-- Filters -->
+    <div class="space-y-2">
+      <!-- Category Filter -->
+      <select
+        [value]="selectedCategory() || ''"
+        (change)="onCategoryChange($any($event.target).value || undefined)"
+        class="input-field w-full text-sm">
+        @for (category of categories; track category.value) {
+          <option [value]="category.value || ''">{{ category.label }}</option>
+        }
+      </select>
+
+      <!-- Rating Filter -->
+      <select
+        [value]="selectedRating() || ''"
+        (change)="onRatingChange($any($event.target).value)"
+        class="input-field w-full text-sm">
+        @for (rating of ratingOptions; track rating.value) {
+          <option [value]="rating.value || ''">{{ rating.label }}</option>
+        }
+      </select>
+
+      <!-- Near Me Toggle -->
+      <button
+        (click)="onNearMeToggle()"
+        [class.bg-telegram-button]="useNearMe()"
+        [class.text-telegram-buttonText]="useNearMe()"
+        [class.bg-telegram-secondaryBg]="!useNearMe()"
+        [class.text-telegram-text]="!useNearMe()"
+        class="w-full btn-secondary flex items-center justify-center text-sm">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        {{ useNearMe() ? 'Рядом со мной' : 'Показать рядом' }}
+      </button>
+
+      <!-- Clear Filters -->
+      @if (hasActiveFilters()) {
+        <button
+          (click)="clearFilters()"
+          class="w-full btn-secondary text-sm">
+          Сбросить фильтры
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (loading() && venues().length === 0) {
+    <div class="flex flex-col items-center justify-center py-16 px-4">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-telegram-button border-t-transparent mb-4"></div>
+      <p class="text-telegram-hint text-center">Ищем заведения...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="mx-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+      <p class="text-red-500 text-center">{{ error() }}</p>
+    </div>
+  }
+
+  <!-- Results -->
+  @if (!loading() || venues().length > 0) {
+    <div class="px-4">
+      @if (venues().length > 0) {
+        <div class="mb-4">
+          <p class="text-sm text-telegram-hint">
+            Найдено: {{ venues().length }} заведений
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          @for (venue of venues(); track venue.id) {
+            <app-venue-card [venue]="venue" [clickable]="true"></app-venue-card>
+          }
+        </div>
+
+        <!-- Load More Button -->
+        @if (hasMore() && !loading()) {
+          <div class="mt-4 text-center">
+            <button
+              (click)="loadMore()"
+              class="btn-secondary">
+              Загрузить ещё
+            </button>
+          </div>
+        }
+
+        @if (loading() && venues().length > 0) {
+          <div class="mt-4 text-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-4 border-telegram-button border-t-transparent mx-auto"></div>
+          </div>
+        }
+      } @else if (!loading()) {
+        <!-- Empty State -->
+        <div class="text-center py-12">
+          <div class="text-6xl mb-4">🔍</div>
+          <p class="text-telegram-text text-lg mb-2">Ничего не найдено</p>
+          <p class="text-telegram-hint text-sm">Попробуйте изменить параметры поиска</p>
+        </div>
+      }
+    </div>
+  }
+</div>
+

@@ -73,7 +73,7 @@ export class VenueHandler {
             }));
 
             // Send media group
-            await ctx.replyWithMediaGroup(mediaGroup);
+            await ctx.replyWithMediaGroup(mediaGroup as any);
 
             // Send buttons as separate message (Media Group doesn't support reply_markup on individual items)
             await ctx.reply('Выберите действие:', {

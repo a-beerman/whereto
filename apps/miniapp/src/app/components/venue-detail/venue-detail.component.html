@@ -1,0 +1,173 @@
+<div class="min-h-screen bg-telegram-bg pb-20">
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="flex flex-col items-center justify-center py-16 px-4">
+      <div class="animate-spin rounded-full h-16 w-16 border-4 border-telegram-button border-t-transparent mb-4"></div>
+      <p class="text-telegram-hint text-center">Загружаем информацию...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error() && !loading()) {
+    <div class="flex-1 flex items-center justify-center px-4">
+      <div class="card p-6 max-w-md">
+        <div class="text-6xl text-center mb-4">😕</div>
+        <p class="text-telegram-text text-center text-lg">{{ error() }}</p>
+        <button
+          (click)="handleBack()"
+          class="btn-primary w-full mt-4">
+          Назад
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Venue Details -->
+  @if (venue() && !loading() && !error()) {
+    <div class="pb-4">
+      <!-- Photo Carousel -->
+      <div class="relative w-full h-64 bg-telegram-secondaryBg overflow-hidden">
+        @if (getCurrentPhoto()) {
+          <img
+            [src]="getCurrentPhoto()!"
+            [alt]="venue()!.name"
+            class="w-full h-full object-cover" />
+        } @else {
+          <div class="w-full h-full flex items-center justify-center">
+            <div class="text-8xl">🏪</div>
+          </div>
+        }
+
+        <!-- Photo Navigation -->
+        @if (getPhotos().length > 1) {
+          <button
+            (click)="previousPhoto()"
+            class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-all">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+          </button>
+          <button
+            (click)="nextPhoto()"
+            class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 rounded-full flex items-center justify-center text-white transition-all">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+          
+          <!-- Photo Indicator -->
+          <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+            @for (photo of getPhotos(); track $index) {
+              <div
+                [class.bg-white]="$index === currentPhotoIndex()"
+                [class.bg-white/50]="$index !== currentPhotoIndex()"
+                class="w-2 h-2 rounded-full transition-all">
+              </div>
+            }
+          </div>
+        }
+      </div>
+
+      <!-- Content -->
+      <div class="px-4 mt-4">
+        <!-- Name and Rating -->
+        <h1 class="text-2xl font-bold text-telegram-text mb-3">
+          {{ venue()!.name }}
+        </h1>
+
+        @if (venue()!.rating) {
+          <div class="flex items-center mb-4">
+            <div class="flex items-center mr-2">
+              @for (star of getRatingStars(); track star) {
+                @if (isStarFilled(star)) {
+                  <span class="text-yellow-500 text-lg">⭐</span>
+                } @else {
+                  <span class="text-telegram-hint text-lg">☆</span>
+                }
+              }
+            </div>
+            <span class="text-lg font-bold text-telegram-text">{{ venue()!.rating }}</span>
+            @if (venue()!.ratingCount) {
+              <span class="text-sm text-telegram-hint ml-2">({{ venue()!.ratingCount }} отзывов)</span>
+            }
+          </div>
+        }
+
+        <!-- Address -->
+        <div class="mb-4 p-4 bg-telegram-secondaryBg rounded-xl">
+          <div class="flex items-start">
+            <span class="text-2xl mr-3">📍</span>
+            <div class="flex-1">
+              <p class="text-telegram-text font-medium">{{ venue()!.address }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <button
+            (click)="openDirections()"
+            class="btn-primary flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+            </svg>
+            Маршрут
+          </button>
+          <button
+            (click)="openInMaps()"
+            class="btn-secondary flex items-center justify-center">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+            </svg>
+            Карта
+          </button>
+        </div>
+
+        <!-- Categories -->
+        @if (venue()!.categories && venue()!.categories!.length > 0) {
+          <div class="mb-4">
+            <h2 class="text-sm font-semibold text-telegram-hint mb-2">Категории</h2>
+            <div class="flex flex-wrap gap-2">
+              @for (category of venue()!.categories!; track category) {
+                <span class="px-3 py-2 bg-telegram-button/10 text-telegram-button text-sm font-medium rounded-full">
+                  {{ category }}
+                </span>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Contact Information -->
+        @if (venue()!.phone || venue()!.website) {
+          <div class="mb-4 p-4 bg-telegram-secondaryBg rounded-xl">
+            <h2 class="text-sm font-semibold text-telegram-hint mb-3">Контакты</h2>
+            <div class="space-y-2">
+              @if (venue()!.phone) {
+                <button
+                  (click)="callPhone()"
+                  class="flex items-center text-telegram-link hover:underline w-full text-left">
+                  <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z"></path>
+                  </svg>
+                  {{ venue()!.phone }}
+                </button>
+              }
+              @if (venue()!.website) {
+                <button
+                  (click)="openWebsite()"
+                  class="flex items-center text-telegram-link hover:underline w-full text-left">
+                  <svg class="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd"></path>
+                  </svg>
+                  Веб-сайт
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>
+

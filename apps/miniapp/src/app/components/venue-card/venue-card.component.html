@@ -1,0 +1,101 @@
+<div
+  [class.cursor-pointer]="clickable"
+  [class.ring-2]="isVoted"
+  [class.ring-telegram-button]="isVoted"
+  [class.bg-telegram-button/5]="isVoted"
+  class="card hover:shadow-xl transition-all duration-200 overflow-hidden"
+  (click)="onClick()">
+  
+  <!-- Photo Section -->
+  <div class="relative w-full h-48 bg-telegram-secondaryBg overflow-hidden">
+    @if (getPhotoUrl()) {
+      <img
+        [src]="getPhotoUrl()!"
+        [alt]="venue.name"
+        class="w-full h-full object-cover"
+        loading="lazy" />
+    } @else {
+      <div class="w-full h-full flex items-center justify-center">
+        <div class="text-6xl">🏪</div>
+      </div>
+    }
+    
+    <!-- Vote Indicator Overlay -->
+    @if (showVoteIndicator && isVoted) {
+      <div class="absolute top-4 right-4 w-10 h-10 bg-telegram-button rounded-full flex items-center justify-center shadow-lg">
+        <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+        </svg>
+      </div>
+    }
+  </div>
+
+  <!-- Content Section -->
+  <div class="p-4">
+    <!-- Venue Name -->
+    <h3 class="text-lg font-bold text-telegram-text mb-2 line-clamp-2">
+      {{ venue.name }}
+    </h3>
+    
+    <!-- Rating -->
+    @if (venue.rating) {
+      <div class="flex items-center mb-2">
+        <div class="flex items-center mr-2">
+          @for (star of getRatingStars(); track star) {
+            @if (isStarFilled(star)) {
+              <span class="text-yellow-500 text-sm">⭐</span>
+            } @else if (isStarHalf(star)) {
+              <span class="text-yellow-500 text-sm">⭐</span>
+            } @else {
+              <span class="text-telegram-hint text-sm">☆</span>
+            }
+          }
+        </div>
+        <span class="text-sm font-semibold text-telegram-text">{{ venue.rating }}</span>
+        @if (venue.ratingCount) {
+          <span class="text-xs text-telegram-hint ml-1">({{ venue.ratingCount }})</span>
+        }
+      </div>
+    }
+
+    <!-- Address -->
+    <p class="text-sm text-telegram-hint mb-3 line-clamp-2">
+      📍 {{ venue.address }}
+    </p>
+
+    <!-- Categories -->
+    @if (venue.categories && venue.categories.length > 0) {
+      <div class="flex flex-wrap gap-1 mb-3">
+        @for (category of venue.categories.slice(0, 3); track category) {
+          <span class="px-2 py-1 bg-telegram-button/10 text-telegram-button text-xs rounded-full">
+            {{ category }}
+          </span>
+        }
+        @if (venue.categories.length > 3) {
+          <span class="px-2 py-1 text-telegram-hint text-xs">+{{ venue.categories.length - 3 }}</span>
+        }
+      </div>
+    }
+
+    <!-- Vote Count and Percentage (for voting context) -->
+    @if (showVoteIndicator && voteCount !== undefined) {
+      <div class="mt-3 pt-3 border-t border-telegram-hint/20">
+        <div class="flex items-center justify-between text-sm">
+          <span class="text-telegram-hint">Голосов: {{ voteCount }}</span>
+          @if (votePercentage !== undefined) {
+            <div class="flex items-center">
+              <div class="w-24 h-2 bg-telegram-hint/20 rounded-full overflow-hidden mr-2">
+                <div 
+                  class="h-full bg-telegram-button transition-all duration-300"
+                  [style.width.%]="votePercentage">
+                </div>
+              </div>
+              <span class="text-telegram-text font-semibold">{{ votePercentage }}%</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
+

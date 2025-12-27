@@ -18,6 +18,7 @@ import {
   ApiBody,
   ApiOkResponse,
   ApiBearerAuth,
+  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { ThrottlerGuard } from '@nestjs/throttler';
 import { BookingRequestService } from '../services/booking-request.service';
@@ -38,7 +39,10 @@ export class MerchantController {
   ) {}
 
   @Get('booking-requests')
-  @ApiOperation({ summary: 'Get pending booking requests for the authenticated merchant' })
+  @ApiOperation({
+    summary: 'Get pending booking requests for the authenticated merchant',
+    operationId: 'Merchant_getBookingRequests',
+  })
   @ApiQuery({
     name: 'status',
     required: false,
@@ -65,6 +69,7 @@ export class MerchantController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getBookingRequests(
     @Req() req: any,
     @Query('status') status?: string,
@@ -91,7 +96,7 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/confirm')
-  @ApiOperation({ summary: 'Confirm a booking request' })
+  @ApiOperation({ summary: 'Confirm a booking request', operationId: 'Merchant_confirmBooking' })
   @ApiParam({ name: 'id', description: 'Booking request ID (UUID)' })
   @ApiBody({ type: ConfirmBookingDto })
   @ApiOkResponse({
@@ -111,6 +116,7 @@ export class MerchantController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async confirmBooking(@Req() req: any, @Param('id') id: string, @Body() dto: ConfirmBookingDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.confirmBooking(merchantUserId, id, dto);
@@ -126,7 +132,7 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/reject')
-  @ApiOperation({ summary: 'Reject a booking request' })
+  @ApiOperation({ summary: 'Reject a booking request', operationId: 'Merchant_rejectBooking' })
   @ApiParam({ name: 'id', description: 'Booking request ID (UUID)' })
   @ApiBody({ type: RejectBookingDto })
   @ApiOkResponse({
@@ -146,6 +152,7 @@ export class MerchantController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async rejectBooking(@Req() req: any, @Param('id') id: string, @Body() dto: RejectBookingDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.rejectBooking(merchantUserId, id, dto);
@@ -161,7 +168,10 @@ export class MerchantController {
   }
 
   @Post('booking-requests/:id/propose-time')
-  @ApiOperation({ summary: 'Propose an alternative time for a booking request' })
+  @ApiOperation({
+    summary: 'Propose an alternative time for a booking request',
+    operationId: 'Merchant_proposeTime',
+  })
   @ApiParam({ name: 'id', description: 'Booking request ID (UUID)' })
   @ApiBody({ type: ProposeTimeDto })
   @ApiOkResponse({
@@ -182,6 +192,7 @@ export class MerchantController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async proposeTime(@Req() req: any, @Param('id') id: string, @Body() dto: ProposeTimeDto) {
     const merchantUserId = req.merchantUserId;
     const bookingRequest = await this.bookingRequestService.proposeTime(merchantUserId, id, dto);
@@ -198,7 +209,10 @@ export class MerchantController {
   }
 
   @Get('stats')
-  @ApiOperation({ summary: 'Get statistics for the merchant venue(s)' })
+  @ApiOperation({
+    summary: 'Get statistics for the merchant venue(s)',
+    operationId: 'Merchant_getStats',
+  })
   @ApiQuery({ name: 'startDate', required: false, description: 'Start date (ISO 8601)' })
   @ApiQuery({ name: 'endDate', required: false, description: 'End date (ISO 8601)' })
   @ApiOkResponse({
@@ -221,6 +235,7 @@ export class MerchantController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async getStats(
     @Req() req: any,
     @Query('startDate') startDate?: string,

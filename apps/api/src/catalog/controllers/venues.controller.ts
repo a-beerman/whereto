@@ -8,15 +8,17 @@ import {
   ApiOkResponse,
   ApiNotFoundResponse,
   ApiExtraModels,
+  ApiHeader,
   getSchemaPath,
 } from '@nestjs/swagger';
 import { VenuesService } from '../services/venues.service';
 import { VenueFiltersDto } from '../dto/venue-filters.dto';
 import { VenueResponseDto } from '../dto/venue-response.dto';
 import { MetricsService } from '../../common/services/metrics.service';
+import { ItemResponseDto, PaginatedResponseDto, MetaDto } from '../../common/dto/response.dto';
 
 @ApiTags('catalog')
-@ApiExtraModels(VenueResponseDto)
+@ApiExtraModels(VenueResponseDto, ItemResponseDto, PaginatedResponseDto, MetaDto)
 @Controller('venues')
 export class VenuesController {
   constructor(
@@ -25,26 +27,26 @@ export class VenuesController {
   ) {}
 
   @Get()
-  @ApiOperation({ summary: 'Search and filter venues' })
+  @ApiOperation({ summary: 'Search and filter venues', operationId: 'Venues_findAll' })
+  @ApiHeader({
+    name: 'X-User-Id',
+    description: 'Optional user ID for metrics attribution',
+    required: false,
+  })
   @ApiOkResponse({
     description: 'List of venues matching the search criteria',
     schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: { $ref: getSchemaPath(VenueResponseDto) },
-        },
-        meta: {
-          type: 'object',
+      allOf: [
+        { $ref: getSchemaPath(PaginatedResponseDto) },
+        {
           properties: {
-            total: { type: 'number' },
-            limit: { type: 'number' },
-            offset: { type: 'number' },
-            nextCursor: { type: 'string', nullable: true },
+            data: {
+              type: 'array',
+              items: { $ref: getSchemaPath(VenueResponseDto) },
+            },
           },
         },
-      },
+      ],
     },
   })
   @ApiQuery({ name: 'q', required: false, description: 'Search query (name, address)' })
@@ -117,15 +119,24 @@ export class VenuesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get venue details by ID' })
+  @ApiOperation({ summary: 'Get venue details by ID', operationId: 'Venues_findOne' })
+  @ApiHeader({
+    name: 'X-User-Id',
+    description: 'Optional user ID for metrics attribution',
+    required: false,
+  })
   @ApiParam({ name: 'id', description: 'Venue ID (UUID)' })
   @ApiOkResponse({
     description: 'Venue details',
     schema: {
-      type: 'object',
-      properties: {
-        data: { $ref: getSchemaPath(VenueResponseDto) },
-      },
+      allOf: [
+        { $ref: getSchemaPath(ItemResponseDto) },
+        {
+          properties: {
+            data: { $ref: getSchemaPath(VenueResponseDto) },
+          },
+        },
+      ],
     },
   })
   @ApiNotFoundResponse({ description: 'Venue not found' })

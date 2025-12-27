@@ -6,6 +6,7 @@ import { SearchHandler } from './handlers/search.handler';
 import { VenueHandler } from './handlers/venue.handler';
 import { SavedHandler } from './handlers/saved.handler';
 import { PlanHandler } from './handlers/plan.handler';
+import { MiniAppHandler } from './handlers/miniapp.handler';
 
 export class BotModule {
   private readonly apiClient: ApiClientService;
@@ -15,6 +16,7 @@ export class BotModule {
   private readonly venueHandler: VenueHandler;
   private readonly savedHandler: SavedHandler;
   private readonly planHandler: PlanHandler;
+  private readonly miniAppHandler: MiniAppHandler;
 
   constructor(private readonly bot: Telegraf) {
     this.apiClient = new ApiClientService();
@@ -24,6 +26,7 @@ export class BotModule {
     this.venueHandler = new VenueHandler(this.apiClient, this.stateService);
     this.savedHandler = new SavedHandler(this.apiClient);
     this.planHandler = new PlanHandler(this.apiClient, this.stateService);
+    this.miniAppHandler = new MiniAppHandler();
   }
 
   registerHandlers() {
@@ -153,6 +156,11 @@ _Каждый участник должен сначала выбрать гор
 
     this.bot.command('plan', async (ctx) => {
       await this.planHandler.handlePlanCommand(ctx);
+    });
+
+    // Miniapp open (WebApp)
+    this.bot.command('miniapp', async (ctx) => {
+      await this.miniAppHandler.handleOpen(ctx);
     });
 
     // ============ City Selection ============

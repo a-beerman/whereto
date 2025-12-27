@@ -16,6 +16,7 @@ import {
   ApiParam,
   ApiBody,
   ApiOkResponse,
+  ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiBadRequestResponse,
   ApiExtraModels,
@@ -51,9 +52,9 @@ export class PlansController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create a new plan' })
+  @ApiOperation({ summary: 'Create a new plan', operationId: 'Plans_createPlan' })
   @ApiBody({ type: CreatePlanDto })
-  @ApiOkResponse({
+  @ApiCreatedResponse({
     description: 'Plan created successfully',
     schema: {
       type: 'object',
@@ -72,16 +73,31 @@ export class PlansController {
       },
     },
   })
+  @ApiBadRequestResponse({ description: 'Invalid request payload' })
   async createPlan(@Request() req: Request, @Body() dto: CreatePlanDto) {
+    const chatIdNumber = Number(dto.telegramChatId);
+    if (!Number.isFinite(chatIdNumber)) {
+      throw new BadRequestException('Invalid telegramChatId');
+    }
+
+    const locationLat = dto.locationLat ? Number(dto.locationLat) : undefined;
+    const locationLng = dto.locationLng ? Number(dto.locationLng) : undefined;
+    if (locationLat !== undefined && !Number.isFinite(locationLat)) {
+      throw new BadRequestException('Invalid locationLat');
+    }
+    if (locationLng !== undefined && !Number.isFinite(locationLng)) {
+      throw new BadRequestException('Invalid locationLng');
+    }
+
     const plan = await this.plansService.createPlan({
-      telegramChatId: parseInt(dto.telegramChatId, 10),
+      telegramChatId: chatIdNumber,
       initiatorId: dto.initiatorId,
       date: new Date(dto.date),
       time: dto.time,
       area: dto.area,
       cityId: dto.cityId,
-      locationLat: dto.locationLat ? parseFloat(dto.locationLat) : undefined,
-      locationLng: dto.locationLng ? parseFloat(dto.locationLng) : undefined,
+      locationLat,
+      locationLng,
       budget: dto.budget,
       format: dto.format,
     });
@@ -104,7 +120,7 @@ export class PlansController {
   }
 
   @Post(':id/join')
-  @ApiOperation({ summary: 'Join a plan' })
+  @ApiOperation({ summary: 'Join a plan', operationId: 'Plans_joinPlan' })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiBody({ type: JoinPlanDto })
   @ApiOkResponse({
@@ -121,6 +137,7 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async joinPlan(@Param('id') id: string, @Body() dto: JoinPlanDto) {
     await this.plansService.joinPlan(id, dto.userId, dto.preferences, {
       lat: dto.locationLat ? parseFloat(dto.locationLat) : undefined,
@@ -130,7 +147,10 @@ export class PlansController {
   }
 
   @Get(':id/options')
-  @ApiOperation({ summary: 'Get shortlist of venue options for a plan' })
+  @ApiOperation({
+    summary: 'Get shortlist of venue options for a plan',
+    operationId: 'Plans_getShortlist',
+  })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiOkResponse({
     description: 'Shortlist of venue options',
@@ -158,13 +178,14 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async getShortlist(@Param('id') id: string) {
     const result = await this.plansService.getShortlist(id);
     return { data: result.venues, meetingPoint: result.meetingPoint };
   }
 
   @Post(':id/vote')
-  @ApiOperation({ summary: 'Start voting for a plan' })
+  @ApiOperation({ summary: 'Start voting for a plan', operationId: 'Plans_startVoting' })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiOkResponse({
     description: 'Voting started and shortlist generated',
@@ -191,6 +212,7 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async startVoting(@Param('id') id: string) {
     // Start voting and generate shortlist
     const vote = await this.plansService.startVoting(id);
@@ -204,7 +226,7 @@ export class PlansController {
   }
 
   @Post(':id/vote/cast')
-  @ApiOperation({ summary: 'Cast a vote for a venue in a plan' })
+  @ApiOperation({ summary: 'Cast a vote for a venue in a plan', operationId: 'Plans_castVote' })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiBody({ type: VoteDto })
   @ApiOkResponse({
@@ -221,13 +243,14 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async castVote(@Param('id') id: string, @Body() dto: VoteDto) {
     await this.plansService.castVote(id, dto.userId, dto.venueId);
     return { data: { voted: true } };
   }
 
   @Delete(':id/vote/cast')
-  @ApiOperation({ summary: 'Remove a vote for a venue in a plan' })
+  @ApiOperation({ summary: 'Remove a vote for a venue in a plan', operationId: 'Plans_removeVote' })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiBody({ type: VoteDto })
   @ApiOkResponse({
@@ -244,13 +267,17 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async removeVote(@Param('id') id: string, @Body() dto: VoteDto) {
     await this.plansService.removeVote(id, dto.userId, dto.venueId);
     return { data: { removed: true } };
   }
 
   @Get(':id/vote/user/:userId')
-  @ApiOperation({ summary: 'Get all votes for a user in a plan' })
+  @ApiOperation({
+    summary: 'Get all votes for a user in a plan',
+    operationId: 'Plans_getUserVotes',
+  })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiParam({ name: 'userId', description: 'User ID (Telegram user ID)' })
   @ApiOkResponse({
@@ -265,13 +292,14 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async getUserVotes(@Param('id') id: string, @Param('userId') userId: string) {
     const venueIds = await this.plansService.getUserVotes(id, userId);
     return { data: venueIds };
   }
 
   @Post(':id/close')
-  @ApiOperation({ summary: 'Close a plan (initiator only)' })
+  @ApiOperation({ summary: 'Close a plan (initiator only)', operationId: 'Plans_closePlan' })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiBody({ type: ClosePlanDto })
   @ApiOkResponse({
@@ -289,13 +317,17 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async closePlan(@Param('id') id: string, @Body() dto: ClosePlanDto) {
     const result = await this.plansService.closePlan(id, dto.initiatorId);
     return { data: result };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get plan details including votes and result' })
+  @ApiOperation({
+    summary: 'Get plan details including votes and result',
+    operationId: 'Plans_getPlanDetails',
+  })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiOkResponse({
     description: 'Plan details',
@@ -323,13 +355,17 @@ export class PlansController {
       },
     },
   })
+  @ApiNotFoundResponse({ description: 'Plan not found' })
   async getPlanDetails(@Param('id') id: string) {
     const plan = await this.plansService.getPlanDetails(id);
     return { data: plan };
   }
 
   @Post(':id/booking-request')
-  @ApiOperation({ summary: 'Request a booking for the winning venue (partner venues only)' })
+  @ApiOperation({
+    summary: 'Request a booking for the winning venue (partner venues only)',
+    operationId: 'Plans_createBookingRequest',
+  })
   @ApiParam({ name: 'id', description: 'Plan ID (UUID)' })
   @ApiBody({ type: CreateBookingRequestDto })
   @ApiOkResponse({

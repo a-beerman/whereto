@@ -1,5 +1,12 @@
 import { Controller, Post, Param, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiParam, ApiOkResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiParam,
+  ApiOkResponse,
+  ApiBearerAuth,
+  ApiUnauthorizedResponse,
+} from '@nestjs/swagger';
 import { SyncCityJob } from '../jobs/sync-city.job';
 
 @ApiTags('ingestion')
@@ -8,8 +15,12 @@ export class IngestionController {
   constructor(private readonly syncCityJob: SyncCityJob) {}
 
   @Post('sync/:cityId')
-  @ApiOperation({ summary: 'Sync venues for a city from Google Places' })
+  @ApiOperation({
+    summary: 'Sync venues for a city from Google Places',
+    operationId: 'Ingestion_syncCity',
+  })
   @ApiParam({ name: 'cityId', description: 'City ID (UUID)' })
+  @ApiBearerAuth('bearer')
   @ApiOkResponse({
     description: 'City sync completed',
     schema: {
@@ -33,6 +44,7 @@ export class IngestionController {
       },
     },
   })
+  @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async syncCity(@Param('cityId') cityId: string) {
     try {
       const metrics = await this.syncCityJob.syncCity(cityId);

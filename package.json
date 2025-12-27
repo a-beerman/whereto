@@ -75,6 +75,7 @@
     "tslib": "^2.3.0",
     "typeorm": "^0.3.28",
     "typescript": "~5.9.0",
+    "typescript-eslint": "^8.50.1",
     "zone.js": "~0.14.5"
   },
   "lint-staged": {

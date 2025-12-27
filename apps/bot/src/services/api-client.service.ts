@@ -173,9 +173,9 @@ export class ApiClientService {
   }): Promise<{ data: { id: string } }> {
     // Map budget string to enum
     let budgetEnum: CreatePlanDtoBudgetEnum | undefined;
-    if (data.budget === '$') budgetEnum = CreatePlanDtoBudgetEnum.Dollar;
-    else if (data.budget === '$$') budgetEnum = CreatePlanDtoBudgetEnum.DoubleDollar;
-    else if (data.budget === '$$$') budgetEnum = CreatePlanDtoBudgetEnum.TripleDollar;
+    if (data.budget === '$') budgetEnum = CreatePlanDtoBudgetEnum.LOW;
+    else if (data.budget === '$$') budgetEnum = CreatePlanDtoBudgetEnum.MEDIUM;
+    else if (data.budget === '$$$') budgetEnum = CreatePlanDtoBudgetEnum.HIGH;
 
     const dto: CreatePlanDto = {
       telegramChatId: data.telegramChatId,

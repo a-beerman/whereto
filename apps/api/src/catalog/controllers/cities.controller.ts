@@ -14,7 +14,7 @@ export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List available cities' })
+  @ApiOperation({ summary: 'List available cities', operationId: 'Cities_findAll' })
   @ApiOkResponse({
     description: 'List of cities',
     schema: {
@@ -49,7 +49,7 @@ export class CitiesController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get city details by ID' })
+  @ApiOperation({ summary: 'Get city details by ID', operationId: 'Cities_findOne' })
   @ApiParam({ name: 'id', description: 'City ID (UUID)' })
   @ApiOkResponse({
     description: 'City details',

@@ -1329,14 +1329,14 @@ export class PlanHandler {
         `Голосов: ${winner.voteCount}`;
 
       // Create short plan ID for callback (first 8 chars)
-      const shortPlanId = planId.slice(0, 8);
+      const shortId = planId.slice(0, 8);
 
       await ctx.reply(winnerAnnouncement, {
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
             [{ text: '📍 Маршрут', callback_data: `route:${winner.venueId}` }],
-            [{ text: '📋 Забронировать', callback_data: `book:${shortPlanId}` }],
+            [{ text: '📋 Забронировать', callback_data: `book:${shortId}` }],
           ],
         },
       });
@@ -1651,7 +1651,7 @@ export class PlanHandler {
     await ctx.reply(message, {
       parse_mode: 'Markdown',
       reply_markup: {
-        inline_keyboard: buttons,
+        inline_keyboard: buttons as any,
       },
     });
   }

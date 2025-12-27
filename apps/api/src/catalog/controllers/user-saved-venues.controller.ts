@@ -27,6 +27,7 @@ import { SaveVenueDto } from '../dto/save-venue.dto';
 import { MetricsService } from '../../common/services/metrics.service';
 import { IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PaginatedResponseDto, MetaDto } from '../../common/dto/response.dto';
 
 // TODO: Implement Telegram auth guard
 // For now, we'll use a simple user ID from headers/query
@@ -44,7 +45,7 @@ class PaginationDto {
 }
 
 @ApiTags('catalog')
-@ApiExtraModels(VenueResponseDto)
+@ApiExtraModels(VenueResponseDto, PaginatedResponseDto, MetaDto)
 @Controller('me/saved')
 export class UserSavedVenuesController {
   constructor(
@@ -64,7 +65,7 @@ export class UserSavedVenuesController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get user saved venues' })
+  @ApiOperation({ summary: 'Get user saved venues', operationId: 'UserSavedVenues_getSavedVenues' })
   @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
   @ApiQuery({
     name: 'limit',
@@ -75,21 +76,17 @@ export class UserSavedVenuesController {
   @ApiOkResponse({
     description: 'List of saved venues',
     schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: { $ref: getSchemaPath(VenueResponseDto) },
-        },
-        meta: {
-          type: 'object',
+      allOf: [
+        { $ref: getSchemaPath(PaginatedResponseDto) },
+        {
           properties: {
-            total: { type: 'number' },
-            limit: { type: 'number' },
-            offset: { type: 'number' },
+            data: {
+              type: 'array',
+              items: { $ref: getSchemaPath(VenueResponseDto) },
+            },
           },
         },
-      },
+      ],
     },
   })
   async getSavedVenues(@Request() req: Request, @Query() query: PaginationDto) {
@@ -98,7 +95,7 @@ export class UserSavedVenuesController {
   }
 
   @Post()
-  @ApiOperation({ summary: 'Save a venue for user' })
+  @ApiOperation({ summary: 'Save a venue for user', operationId: 'UserSavedVenues_saveVenue' })
   @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
   @ApiBody({ type: SaveVenueDto })
   @ApiOkResponse({
@@ -126,7 +123,7 @@ export class UserSavedVenuesController {
   }
 
   @Delete(':venueId')
-  @ApiOperation({ summary: 'Remove saved venue' })
+  @ApiOperation({ summary: 'Remove saved venue', operationId: 'UserSavedVenues_removeSavedVenue' })
   @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
   @ApiParam({ name: 'venueId', description: 'Venue ID (UUID)' })
   @ApiOkResponse({

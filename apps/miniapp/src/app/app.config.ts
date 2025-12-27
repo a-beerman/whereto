@@ -6,6 +6,17 @@ import { TelegramAuthInterceptor } from './interceptors/telegram-auth.intercepto
 import { appRoutes } from './app.routes';
 import { environment } from '../environments/environment';
 
+function getApiBaseFromQuery(defaultUrl: string): string {
+  try {
+    const url = new URL(window.location.href);
+    const apiParam = url.searchParams.get('api');
+    if (apiParam && /^https?:\/\//.test(apiParam)) {
+      return apiParam;
+    }
+  } catch {}
+  return defaultUrl;
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
@@ -16,6 +27,6 @@ export const appConfig: ApplicationConfig = {
       useClass: TelegramAuthInterceptor,
       multi: true,
     },
-    provideApi(environment.apiUrl),
+    provideApi(getApiBaseFromQuery(environment.apiUrl)),
   ],
 };

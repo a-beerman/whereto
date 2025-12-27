@@ -10,7 +10,7 @@ export class MetricsController {
   constructor(private readonly metricsService: MetricsService) {}
 
   @Get('latency')
-  @ApiOperation({ summary: 'Get latency statistics' })
+  @ApiOperation({ summary: 'Get latency statistics', operationId: 'Metrics_getLatencyStats' })
   @ApiOkResponse({
     description: 'Latency statistics',
     schema: {
@@ -30,7 +30,7 @@ export class MetricsController {
   }
 
   @Get('health')
-  @ApiOperation({ summary: 'Get health metrics' })
+  @ApiOperation({ summary: 'Get health metrics', operationId: 'Metrics_getHealthMetrics' })
   @ApiOkResponse({
     description: 'Health metrics',
     schema: {

@@ -23,8 +23,8 @@ export class CatalogApiService {
    * Get all cities
    */
   getCities(): Observable<City[]> {
-    return this.catalog.catalogControllerFindAllCities().pipe(
-      map((response) => response.data || []),
+    return this.catalog.citiesFindAll().pipe(
+      map((response: any) => response.data || []),
       catchError((error) => this.errorHandler.createCatchError('Ошибка загрузки городов')(error)),
     );
   }
@@ -33,8 +33,29 @@ export class CatalogApiService {
    * Get venue by ID
    */
   getVenue(venueId: string): Observable<Venue> {
-    return this.catalog.catalogControllerGetVenueDetails(venueId).pipe(
-      map((response) => response.data),
+    return this.catalog.venuesFindOne(venueId).pipe(
+      map((response: any) => {
+        const venueDto = response.data;
+        // Convert VenueResponseDto to Venue
+        return {
+          id: venueDto.id,
+          name: venueDto.name,
+          address: venueDto.address,
+          rating: venueDto.rating,
+          ratingCount: venueDto.ratingCount,
+          categories: venueDto.categories,
+          location:
+            venueDto.lat && venueDto.lng
+              ? {
+                  type: 'Point',
+                  coordinates: [venueDto.lng, venueDto.lat] as [number, number],
+                }
+              : undefined,
+          photoUrls: venueDto.photoUrls,
+          phone: venueDto.phone,
+          website: venueDto.website,
+        };
+      }),
       catchError((error) => this.errorHandler.createCatchError('Ошибка загрузки заведения')(error)),
     );
   }
@@ -48,10 +69,51 @@ export class CatalogApiService {
     cityId?: string;
     limit?: number;
     offset?: number;
+    minRating?: number;
+    lat?: number;
+    lng?: number;
+    radius?: number;
   }): Observable<Venue[]> {
-    return this.catalog.catalogControllerSearchVenues(params).pipe(
-      map((response) => response.data || []),
-      catchError((error) => this.errorHandler.createCatchError('Ошибка поиска заведений')(error)),
-    );
+    return this.catalog
+      .venuesFindAll(
+        params.q,
+        params.cityId,
+        params.category,
+        params.lat,
+        params.lng,
+        params.radius,
+        undefined, // bbox
+        params.minRating,
+        undefined, // openNow
+        params.limit,
+        params.offset,
+        undefined, // cursor
+        undefined, // sort
+      )
+      .pipe(
+        map((response: any) => {
+          const venues = response.data || [];
+          // Convert VenueResponseDto[] to Venue[]
+          return venues.map((venueDto: any) => ({
+            id: venueDto.id,
+            name: venueDto.name,
+            address: venueDto.address,
+            rating: venueDto.rating,
+            ratingCount: venueDto.ratingCount,
+            categories: venueDto.categories,
+            location:
+              venueDto.lat && venueDto.lng
+                ? {
+                    type: 'Point',
+                    coordinates: [venueDto.lng, venueDto.lat] as [number, number],
+                  }
+                : undefined,
+            photoUrls: venueDto.photoUrls,
+            phone: venueDto.phone,
+            website: venueDto.website,
+          }));
+        }),
+        catchError((error) => this.errorHandler.createCatchError('Ошибка поиска заведений')(error)),
+      );
   }
 }

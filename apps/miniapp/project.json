@@ -50,6 +50,16 @@
     },
     "serve": {
       "executor": "@angular/build:dev-server",
+      "options": {
+        "allowedHosts": [
+          "localhost",
+          "127.0.0.1",
+          ".trycloudflare.com",
+          ".ngrok.io",
+          ".ngrok-free.app",
+          "ontario-red-throws-total.trycloudflare.com"
+        ]
+      },
       "configurations": {
         "production": {
           "buildTarget": "miniapp:build:production"

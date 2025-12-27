@@ -138,6 +138,20 @@ npm run generate:api-client
 // Use: import { Plan } from '@whereto/shared/api-client-angular';
 ```
 
+### Updated Client Methods and Response Shapes
+
+As of Dec 2025, API `operationId`s were standardized and responses wrapped for consistency:
+
+- Catalog service method names:
+  - `citiesFindAll`, `venuesFindAll`, `venuesFindOne`
+- Plans service method names:
+  - `plansCreatePlan`, `plansGetPlanDetails`, `plansJoinPlan`, `plansStartVoting`, `plansCastVote`, `plansRemoveVote`, `plansGetUserVotes`, `plansClosePlan`
+- Response wrappers:
+  - Lists: `{ data: T[], meta?: { total, limit, offset, nextCursor } }`
+  - Items: `{ data: T }`
+
+Miniapp services have been updated to extract `response.data` and map `VenueResponseDto` to the local `Venue` shape. If voting returns validation errors, verify `venueId` values are valid UUIDs from the shortlist options.
+
 ## Telegram Integration
 
 ### Web App Script
