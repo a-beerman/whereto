@@ -1,7 +1,7 @@
 import { IsString, IsUUID } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
-export class VoteDto {
+export class Vote {
   @ApiProperty({ description: 'Telegram user ID' })
   @IsString()
   userId!: string; // Telegram user ID

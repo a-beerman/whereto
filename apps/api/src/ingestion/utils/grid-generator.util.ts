@@ -138,28 +138,50 @@ export function calculateOptimalGridSize(bounds: CityBounds): number {
  * - { north, south, east, west }
  * - { bounds: { minLat, ... } }
  */
-export function parseCityBounds(bounds: any): CityBounds | null {
+interface BoundsInput {
+  minLat?: string | number;
+  minLng?: string | number;
+  maxLat?: string | number;
+  maxLng?: string | number;
+  north?: string | number;
+  south?: string | number;
+  east?: string | number;
+  west?: string | number;
+  bounds?: BoundsInput;
+}
+
+export function parseCityBounds(bounds: BoundsInput | null | undefined): CityBounds | null {
   if (!bounds) {
     return null;
   }
 
   // Format 1: { minLat, minLng, maxLat, maxLng }
-  if (bounds.minLat !== undefined && bounds.minLng !== undefined) {
+  if (
+    bounds.minLat !== undefined &&
+    bounds.minLng !== undefined &&
+    bounds.maxLat !== undefined &&
+    bounds.maxLng !== undefined
+  ) {
     return {
-      minLat: parseFloat(bounds.minLat),
-      minLng: parseFloat(bounds.minLng),
-      maxLat: parseFloat(bounds.maxLat),
-      maxLng: parseFloat(bounds.maxLng),
+      minLat: parseFloat(String(bounds.minLat)),
+      minLng: parseFloat(String(bounds.minLng)),
+      maxLat: parseFloat(String(bounds.maxLat)),
+      maxLng: parseFloat(String(bounds.maxLng)),
     };
   }
 
   // Format 2: { north, south, east, west }
-  if (bounds.north !== undefined && bounds.south !== undefined) {
+  if (
+    bounds.north !== undefined &&
+    bounds.south !== undefined &&
+    bounds.east !== undefined &&
+    bounds.west !== undefined
+  ) {
     return {
-      minLat: parseFloat(bounds.south),
-      minLng: parseFloat(bounds.west),
-      maxLat: parseFloat(bounds.north),
-      maxLng: parseFloat(bounds.east),
+      minLat: parseFloat(String(bounds.south)),
+      minLng: parseFloat(String(bounds.west)),
+      maxLat: parseFloat(String(bounds.north)),
+      maxLng: parseFloat(String(bounds.east)),
     };
   }
 

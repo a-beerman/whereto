@@ -21,8 +21,8 @@ import { HealthController } from './common/controllers/health.controller';
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => {
-        const config = configService.get('database');
+      useFactory: (configService: ConfigService): ReturnType<typeof databaseConfig> => {
+        const config = configService.get<ReturnType<typeof databaseConfig>>('database');
         if (!config) {
           throw new Error('Database configuration not found');
         }

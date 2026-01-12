@@ -80,7 +80,21 @@ export class SyncCityJob {
       this.logger.log(`City coordinates: ${centerLat}, ${centerLng}`);
 
       // Determine search strategy: grid for large cities, single center for small cities
-      const cityBounds = parseCityBounds(city.bounds);
+      const cityBounds = parseCityBounds(
+        city.bounds as
+          | {
+              north?: number;
+              south?: number;
+              east?: number;
+              west?: number;
+              minLat?: number;
+              minLng?: number;
+              maxLat?: number;
+              maxLng?: number;
+            }
+          | null
+          | undefined,
+      );
       const useGrid = cityBounds !== null; // Use grid if bounds are defined
 
       let searchAreas: SearchArea[];

@@ -53,17 +53,11 @@ export class VoteCastRepository {
   }
 
   async upsert(voteId: string, planId: string, userId: string, venueId: string): Promise<VoteCast> {
-    // Check if this specific vote (voteId + userId + venueId) already exists
-    const existing = await this.repository.findOne({
-      where: { voteId, userId, venueId },
-    });
+    // Database has unique constraint on (voteId, userId) - single choice voting
+    // First, remove any existing vote for this user in this vote session
+    await this.repository.delete({ voteId, userId });
 
-    if (existing) {
-      // Vote already exists, return it
-      return existing;
-    }
-
-    // Create new vote cast (supports multiple choice - user can vote for multiple venues)
+    // Then create the new vote cast
     return this.create({ voteId, planId, userId, venueId });
   }
 

@@ -1,11 +1,17 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, throwError } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { map, catchError, switchMap } from 'rxjs/operators';
 import {
   PlansService,
-  CreatePlanDto,
-  PlansGetPlanDetails200ResponseData,
-  PlansStartVoting200ResponseData,
+  CreatePlan,
+  PlanDetailsData,
+  StartVotingData,
+  Vote,
+  JoinPlan,
+  ClosePlan,
+  CreatePlanData,
+  ClosePlanData,
+  VenueResponse,
 } from '@whereto/shared/api-client-angular';
 import { ErrorHandlerService } from './error-handler.service';
 import { Plan, VoteOption } from '../models/types';
@@ -24,20 +30,27 @@ export class PlanApiService {
   private readonly plans = inject(PlansService);
   private readonly errorHandler = inject(ErrorHandlerService);
 
-  private isUuid(value: string | undefined): boolean {
-    if (!value) return false;
-    // Basic UUID v4 format validation (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
-    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-      value,
-    );
-  }
-
   /**
    * Create a new plan
    */
-  createPlan(planData: CreatePlanDto): Observable<Plan> {
+  createPlan(planData: CreatePlan): Observable<Plan> {
     return this.plans.plansCreatePlan(planData).pipe(
-      map((response) => response.data as Plan),
+      map((response) => {
+        const createPlanData: CreatePlanData = response.data;
+        // Convert CreatePlanData to Plan (add missing fields)
+        return {
+          id: createPlanData.id,
+          telegramChatId: planData.telegramChatId,
+          initiatorId: createPlanData.initiatorId,
+          date: createPlanData.date,
+          time: createPlanData.time,
+          cityId: planData.cityId || '',
+          area: planData.area,
+          budget: planData.budget,
+          format: planData.format,
+          status: createPlanData.status,
+        } as Plan;
+      }),
       catchError((error) => this.errorHandler.createCatchError('Ошибка создания плана')(error)),
     );
   }
@@ -45,9 +58,9 @@ export class PlanApiService {
   /**
    * Get plan details by ID
    */
-  getPlanDetails(planId: string): Observable<PlansGetPlanDetails200ResponseData> {
+  getPlanDetails(planId: string): Observable<PlanDetailsData> {
     return this.plans.plansGetPlanDetails(planId).pipe(
-      map((response) => response.data as PlansGetPlanDetails200ResponseData),
+      map((response) => response.data),
       catchError((error) => this.errorHandler.createCatchError('Ошибка загрузки плана')(error)),
     );
   }
@@ -56,7 +69,8 @@ export class PlanApiService {
    * Join a plan
    */
   joinPlan(planId: string, userId: string): Observable<void> {
-    return this.plans.plansJoinPlan(planId, { userId }).pipe(
+    const joinDto: JoinPlan = { userId };
+    return this.plans.plansJoinPlan(planId, joinDto).pipe(
       map(() => undefined),
       catchError((error) =>
         this.errorHandler.createCatchError('Ошибка присоединения к плану')(error),
@@ -67,9 +81,9 @@ export class PlanApiService {
   /**
    * Start voting for a plan
    */
-  startVoting(planId: string): Observable<PlansStartVoting200ResponseData> {
+  startVoting(planId: string): Observable<StartVotingData> {
     return this.plans.plansStartVoting(planId).pipe(
-      map((response) => response.data as PlansStartVoting200ResponseData),
+      map((response) => response.data),
       catchError((error) =>
         this.errorHandler.createCatchError('Ошибка запуска голосования')(error),
       ),
@@ -77,19 +91,50 @@ export class PlanApiService {
   }
 
   /**
+   * Get shortlist of venue options for a plan (used when voting already started)
+   */
+  getShortlist(planId: string): Observable<{ venues: VenueResponse[] }> {
+    return this.plans.plansGetShortlist(planId).pipe(
+      map((response) => {
+        // Convert ShortlistOption[] to VenueResponse[]
+        const venues = response.data.map((option) => option.venue);
+        return { venues };
+      }),
+      catchError((error) => this.errorHandler.createCatchError('Ошибка загрузки вариантов')(error)),
+    );
+  }
+
+  /**
    * Cast a vote for a venue
    */
   castVote(planId: string, userId: string, venueId: string): Observable<void> {
-    if (!this.isUuid(venueId)) {
-      return this.errorHandler.handle(
-        { status: 400, message: 'Некорректный идентификатор заведения' },
-        'Некорректный идентификатор заведения',
-      );
+    // Validate inputs - ensure venueId is a non-empty string
+    if (!venueId || typeof venueId !== 'string' || venueId.trim() === '') {
+      console.error('castVote: venueId is invalid', {
+        planId,
+        userId,
+        venueId,
+        type: typeof venueId,
+      });
+      return throwError(() => new Error('venueId must be a non-empty string'));
     }
-    console.log('Casting vote payload', { planId, userId, venueId });
-    return this.plans.plansCastVote(planId, { userId, venueId }).pipe(
+    if (!userId || typeof userId !== 'string' || userId.trim() === '') {
+      console.error('castVote: userId is invalid', {
+        planId,
+        userId,
+        venueId,
+        type: typeof userId,
+      });
+      return throwError(() => new Error('userId must be a non-empty string'));
+    }
+    const voteDto: Vote = { userId, venueId };
+    console.log('castVote: sending vote DTO', voteDto);
+    return this.plans.plansCastVote(planId, voteDto).pipe(
       map(() => undefined),
-      catchError((error) => this.errorHandler.createCatchError('Ошибка при голосовании')(error)),
+      catchError((error) => {
+        console.error('castVote: API error', error);
+        return this.errorHandler.createCatchError('Ошибка при голосовании')(error);
+      }),
     );
   }
 
@@ -97,14 +142,8 @@ export class PlanApiService {
    * Remove a vote
    */
   removeVote(planId: string, userId: string, venueId: string): Observable<void> {
-    if (!this.isUuid(venueId)) {
-      return this.errorHandler.handle(
-        { status: 400, message: 'Некорректный идентификатор заведения' },
-        'Некорректный идентификатор заведения',
-      );
-    }
-    console.log('Removing vote payload', { planId, userId, venueId });
-    return this.plans.plansRemoveVote(planId, { userId, venueId }).pipe(
+    const voteDto: Vote = { userId, venueId };
+    return this.plans.plansRemoveVote(planId, voteDto).pipe(
       map(() => undefined),
       catchError((error) =>
         this.errorHandler.createCatchError('Ошибка при удалении голоса')(error),
@@ -124,10 +163,30 @@ export class PlanApiService {
 
   /**
    * Close a plan and get results
+   * Note: The result component fetches plan details separately, so this returns a minimal structure
    */
   closePlan(planId: string, initiatorId: string): Observable<{ plan: Plan; winner?: VoteOption }> {
-    return this.plans.plansClosePlan(planId, { initiatorId }).pipe(
-      map((response) => response.data as { plan: Plan; winner?: VoteOption }),
+    const closeDto: ClosePlan = { initiatorId };
+    return this.plans.plansClosePlan(planId, closeDto).pipe(
+      // After closing, fetch the updated plan details to get winner info
+      map(() => planId),
+      switchMap((id) => this.plans.plansGetPlanDetails(id)),
+      map((planResponse) => {
+        const planData = planResponse.data;
+        // Convert PlanDetailsData to Plan (minimal conversion since some fields aren't in PlanDetailsData)
+        const plan: Plan = {
+          id: planData.id,
+          telegramChatId: '', // Not available in PlanDetailsData
+          initiatorId: planData.initiatorId,
+          date: planData.date,
+          time: planData.time,
+          cityId: '', // Not available in PlanDetailsData
+          status: planData.status,
+        };
+
+        // Winner will be loaded by result component from plan details
+        return { plan, winner: undefined };
+      }),
       catchError((error) => this.errorHandler.createCatchError('Ошибка при закрытии плана')(error)),
     );
   }

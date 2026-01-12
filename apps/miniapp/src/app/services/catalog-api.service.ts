@@ -1,7 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { CatalogService } from '@whereto/shared/api-client-angular';
+import {
+  CatalogService,
+  CitiesResponse,
+  VenueDetailsResponse,
+  VenuesResponse,
+  VenueResponse,
+  City as ApiCity,
+} from '@whereto/shared/api-client-angular';
 import { ErrorHandlerService } from './error-handler.service';
 import { City, Venue } from '../models/types';
 
@@ -24,7 +31,16 @@ export class CatalogApiService {
    */
   getCities(): Observable<City[]> {
     return this.catalog.citiesFindAll().pipe(
-      map((response: any) => response.data || []),
+      map((response: CitiesResponse) => {
+        const cities = response.data || [];
+        // Convert ApiCity[] to City[]
+        return cities
+          .filter((city: ApiCity) => city.id && city.name) // Filter out incomplete cities
+          .map((city: ApiCity) => ({
+            id: city.id!,
+            name: city.name!,
+          }));
+      }),
       catchError((error) => this.errorHandler.createCatchError('Ошибка загрузки городов')(error)),
     );
   }
@@ -34,9 +50,12 @@ export class CatalogApiService {
    */
   getVenue(venueId: string): Observable<Venue> {
     return this.catalog.venuesFindOne(venueId).pipe(
-      map((response: any) => {
+      map((response: VenueDetailsResponse) => {
         const venueDto = response.data;
-        // Convert VenueResponseDto to Venue
+        if (!venueDto) {
+          throw new Error('Venue not found');
+        }
+        // Convert VenueResponse to Venue
         return {
           id: venueDto.id,
           name: venueDto.name,
@@ -81,7 +100,7 @@ export class CatalogApiService {
         params.category,
         params.lat,
         params.lng,
-        params.radius,
+        params.radius, // radiusMeters parameter
         undefined, // bbox
         params.minRating,
         undefined, // openNow
@@ -91,10 +110,10 @@ export class CatalogApiService {
         undefined, // sort
       )
       .pipe(
-        map((response: any) => {
+        map((response: VenuesResponse) => {
           const venues = response.data || [];
-          // Convert VenueResponseDto[] to Venue[]
-          return venues.map((venueDto: any) => ({
+          // Convert VenueResponse[] to Venue[]
+          return venues.map((venueDto: VenueResponse) => ({
             id: venueDto.id,
             name: venueDto.name,
             address: venueDto.address,

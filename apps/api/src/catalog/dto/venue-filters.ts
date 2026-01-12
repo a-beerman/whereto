@@ -2,7 +2,7 @@ import { IsOptional, IsString, IsNumber, IsBoolean, Min, Max, IsUUID } from 'cla
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
-export class VenueFiltersDto {
+export class VenueFilters {
   @ApiPropertyOptional({ description: 'Search query (name, address)' })
   @IsOptional()
   @IsString()

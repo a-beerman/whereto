@@ -1,9 +1,11 @@
 import { Controller, Get, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiExtraModels } from '@nestjs/swagger';
 import { MetricsService } from '../services/metrics.service';
 import { ThrottlerGuard } from '@nestjs/throttler';
+import { GetLatencyStatsResponse, GetHealthMetricsResponse } from '../dto/common-responses';
 
 @ApiTags('metrics')
+@ApiExtraModels(GetLatencyStatsResponse, GetHealthMetricsResponse)
 @Controller('metrics')
 @UseGuards(ThrottlerGuard)
 export class MetricsController {
@@ -13,13 +15,7 @@ export class MetricsController {
   @ApiOperation({ summary: 'Get latency statistics', operationId: 'Metrics_getLatencyStats' })
   @ApiOkResponse({
     description: 'Latency statistics',
-    schema: {
-      type: 'object',
-      properties: {
-        data: { type: 'object' },
-        timestamp: { type: 'string', format: 'date-time' },
-      },
-    },
+    type: GetLatencyStatsResponse,
   })
   getLatencyStats() {
     const stats = this.metricsService.getAllLatencyStats();
@@ -33,13 +29,7 @@ export class MetricsController {
   @ApiOperation({ summary: 'Get health metrics', operationId: 'Metrics_getHealthMetrics' })
   @ApiOkResponse({
     description: 'Health metrics',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string' },
-        timestamp: { type: 'string', format: 'date-time' },
-      },
-    },
+    type: GetHealthMetricsResponse,
   })
   getHealthMetrics() {
     // This is a simple health check endpoint

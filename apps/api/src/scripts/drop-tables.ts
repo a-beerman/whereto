@@ -45,4 +45,4 @@ async function dropTables() {
   }
 }
 
-dropTables();
+void dropTables();

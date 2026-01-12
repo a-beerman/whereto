@@ -1,6 +1,57 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export class VenueResponseDto {
+export class SocialMediaLinks {
+  @ApiPropertyOptional({ description: 'Facebook page URL' })
+  facebook?: string;
+
+  @ApiPropertyOptional({ description: 'Instagram profile URL' })
+  instagram?: string;
+
+  @ApiPropertyOptional({ description: 'Twitter/X profile URL' })
+  twitter?: string;
+
+  @ApiPropertyOptional({ description: 'Telegram channel/group URL' })
+  telegram?: string;
+
+  @ApiPropertyOptional({ description: 'WhatsApp contact URL' })
+  whatsapp?: string;
+
+  @ApiPropertyOptional({ description: 'Viber contact URL' })
+  viber?: string;
+
+  @ApiPropertyOptional({ description: 'Facebook Messenger URL' })
+  messenger?: string;
+}
+
+export class OpeningHoursPeriod {
+  @ApiProperty({ description: 'Day of week (0-6, Sunday-Saturday)' })
+  open!: {
+    day: number;
+    time: string;
+  };
+
+  @ApiPropertyOptional({ description: 'Closing time' })
+  close?: {
+    day: number;
+    time: string;
+  };
+}
+
+export class OpeningHours {
+  @ApiPropertyOptional({ description: 'Whether venue is open now' })
+  open_now?: boolean;
+
+  @ApiPropertyOptional({ description: 'Opening hours periods', type: [OpeningHoursPeriod] })
+  periods?: OpeningHoursPeriod[];
+
+  @ApiPropertyOptional({ description: 'Human-readable weekday text', type: [String] })
+  weekday_text?: string[];
+
+  @ApiPropertyOptional({ description: 'Formatted hours string' })
+  formatted?: string;
+}
+
+export class VenueResponse {
   @ApiProperty({ description: 'Venue ID (UUID)' })
   id!: string;
 
@@ -37,8 +88,8 @@ export class VenueResponseDto {
   @ApiPropertyOptional({ description: 'Photo URLs (converted from references)', type: [String] })
   photoUrls?: string[]; // Photo URLs (converted from references)
 
-  @ApiPropertyOptional({ description: 'Opening hours (formatted or raw)' })
-  hours?: any; // Opening hours (formatted or raw)
+  @ApiPropertyOptional({ description: 'Opening hours (formatted or raw)', type: OpeningHours })
+  hours?: OpeningHours;
 
   @ApiPropertyOptional({ description: 'Phone number (international format)' })
   phone?: string;
@@ -48,26 +99,9 @@ export class VenueResponseDto {
 
   @ApiPropertyOptional({
     description: 'Social media and messenger links',
-    type: 'object',
-    properties: {
-      facebook: { type: 'string' },
-      instagram: { type: 'string' },
-      twitter: { type: 'string' },
-      telegram: { type: 'string' },
-      whatsapp: { type: 'string' },
-      viber: { type: 'string' },
-      messenger: { type: 'string' },
-    },
+    type: SocialMediaLinks,
   })
-  socialMedia?: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-    telegram?: string;
-    whatsapp?: string;
-    viber?: string;
-    messenger?: string;
-  };
+  socialMedia?: SocialMediaLinks;
 
   @ApiProperty({ description: 'Venue status', enum: ['active', 'hidden', 'duplicate'] })
   status!: 'active' | 'hidden' | 'duplicate';

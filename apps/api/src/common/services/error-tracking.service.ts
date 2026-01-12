@@ -5,10 +5,10 @@ export interface ErrorContext {
   requestId?: string;
   endpoint?: string;
   method?: string;
-  body?: any;
-  query?: any;
-  params?: any;
-  metadata?: Record<string, any>;
+  body?: unknown;
+  query?: unknown;
+  params?: unknown;
+  metadata?: Record<string, unknown>;
 }
 
 @Injectable()

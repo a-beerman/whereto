@@ -8,7 +8,7 @@ export enum BudgetLevel {
   HIGH = '$$$',
 }
 
-export class CreatePlanDto {
+export class CreatePlan {
   @ApiProperty({ description: 'Telegram chat ID' })
   @IsString()
   telegramChatId!: string; // Will be converted to number

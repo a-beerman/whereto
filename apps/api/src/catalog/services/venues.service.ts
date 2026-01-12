@@ -1,10 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { VenueRepository, VenueFilters } from '../repositories/venue.repository';
-import { VenueResponseDto } from '../dto/venue-response.dto';
+import { VenueResponse } from '../dto/venue-response';
 import { PhotoService } from './photo.service';
 import { HoursService } from './hours.service';
 import { haversineDistance } from '../../utils/geo';
 import { extractLatLng } from '../types/coordinates.type';
+import { Venue } from '../entities/venue.entity';
 
 @Injectable()
 export class VenuesService {
@@ -15,7 +16,7 @@ export class VenuesService {
   ) {}
 
   async search(filters: VenueFilters): Promise<{
-    venues: VenueResponseDto[];
+    venues: VenueResponse[];
     total: number;
     nextCursor?: string;
   }> {
@@ -67,7 +68,7 @@ export class VenuesService {
     };
   }
 
-  async findById(id: string): Promise<VenueResponseDto | null> {
+  async findById(id: string): Promise<VenueResponse | null> {
     const venue = await this.venueRepository.findById(id);
     if (!venue) {
       return null;
@@ -78,7 +79,7 @@ export class VenuesService {
     return this.toResponseDto(venueWithOverrides);
   }
 
-  private toResponseDto(venue: any): VenueResponseDto {
+  private toResponseDto(venue: Venue): VenueResponse {
     // Extract lat/lng from Coordinates
     const coords = extractLatLng(venue.location);
     const lat = coords?.lat;
@@ -87,8 +88,22 @@ export class VenuesService {
     // Convert photo references to URLs
     const photoUrls = venue.photoRefs ? this.photoService.getPhotoUrls(venue.photoRefs) : [];
 
-    // Format hours for display
-    const formattedHours = venue.hours ? this.hoursService.formatHours(venue.hours) : undefined;
+    // Format hours for display - ensure weekday_text is populated
+    let hours: typeof venue.hours;
+    if (venue.hours) {
+      const formattedHours = this.hoursService.formatHours(venue.hours);
+      // If we have formatted hours, ensure weekday_text is set
+      if (formattedHours.length > 0) {
+        hours = {
+          ...venue.hours,
+          weekday_text: formattedHours,
+        };
+      } else {
+        hours = venue.hours;
+      }
+    } else {
+      hours = undefined;
+    }
 
     return {
       id: venue.id,
@@ -102,7 +117,7 @@ export class VenuesService {
       ratingCount: venue.ratingCount,
       photoRefs: photoUrls.length > 0 ? photoUrls : venue.photoRefs, // Return URLs if available, fallback to refs
       photoUrls, // Also include separate photoUrls field
-      hours: formattedHours || venue.hours, // Return formatted hours if available
+      hours, // Return hours with formatted weekday_text if available
       phone: venue.phone,
       website: venue.website,
       socialMedia: venue.socialMedia,

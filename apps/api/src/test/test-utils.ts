@@ -25,8 +25,8 @@ export function createMockRepository<T extends ObjectLiteral>(): Partial<Reposit
  * Create a testing module with mocked dependencies
  */
 export async function createTestingModule(
-  providers: any[],
-  controllers: any[] = [],
+  providers: unknown[],
+  controllers: unknown[] = [],
 ): Promise<TestingModule> {
   return Test.createTestingModule({
     controllers,
@@ -37,7 +37,7 @@ export async function createTestingModule(
 /**
  * Mock repository factory for TypeORM entities
  */
-export function mockRepositoryFactory<T extends ObjectLiteral>(entity: any) {
+export function mockRepositoryFactory<T extends ObjectLiteral>(entity: unknown) {
   return {
     provide: getRepositoryToken(entity),
     useValue: createMockRepository<T>(),

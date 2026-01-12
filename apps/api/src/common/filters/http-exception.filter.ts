@@ -23,14 +23,44 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const message =
       exception instanceof HttpException ? exception.getResponse() : 'Internal server error';
 
-    const errorResponse: any = {
+    interface ErrorResponse {
+      statusCode: number;
+      timestamp: string;
+      path: string;
+      method: string;
+      correlationId?: string;
+      message: unknown;
+      error?: string;
+      stack?: string;
+      errors?: unknown;
+      details?: unknown;
+    }
+
+    const requestWithCorrelationId = request as Request & { correlationId?: string };
+    const errorResponse: ErrorResponse = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       method: request.method,
-      correlationId: (request as any).correlationId,
-      message: typeof message === 'string' ? message : (message as any).message || message,
+      correlationId: requestWithCorrelationId.correlationId,
+      message:
+        typeof message === 'string'
+          ? message
+          : typeof message === 'object' && message !== null && 'message' in message
+            ? String((message as { message: unknown }).message)
+            : JSON.stringify(message),
     };
+
+    // Include validation error details if available
+    if (typeof message === 'object' && message !== null) {
+      const msgObj = message as Record<string, unknown>;
+      if ('errors' in msgObj) {
+        errorResponse.errors = msgObj.errors;
+      }
+      if ('details' in msgObj) {
+        errorResponse.details = msgObj.details;
+      }
+    }
 
     // Include error details in development mode
     if (process.env.NODE_ENV !== 'production' && exception instanceof Error) {
@@ -43,7 +73,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       this.logger.error({
         message: exception.message,
         stack: exception.stack,
-        correlationId: (request as any).correlationId,
+        correlationId: requestWithCorrelationId.correlationId,
         userId: request.headers['x-user-id'] as string,
         endpoint: request.url,
         method: request.method,

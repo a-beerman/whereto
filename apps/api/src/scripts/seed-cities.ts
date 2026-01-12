@@ -31,8 +31,10 @@ async function seed() {
     const queryRunner = dataSource.createQueryRunner();
 
     // Check if cities already exist
-    const existingCities = await queryRunner.query('SELECT COUNT(*) as count FROM cities');
-    const count = parseInt(existingCities[0].count, 10);
+    const existingCities = (await queryRunner.query(
+      'SELECT COUNT(*) as count FROM cities',
+    )) as Array<{ count: string }>;
+    const count = parseInt(existingCities[0]?.count || '0', 10);
     if (count > 0) {
       console.log(`Found ${count} existing cities. Skipping seed.`);
       await dataSource.destroy();
@@ -64,4 +66,4 @@ async function seed() {
   }
 }
 
-seed();
+void seed();

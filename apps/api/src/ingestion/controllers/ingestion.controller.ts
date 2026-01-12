@@ -1,4 +1,4 @@
-import { Controller, Post, Param, UseGuards } from '@nestjs/common';
+import { Controller, Post, Param } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -6,10 +6,13 @@ import {
   ApiOkResponse,
   ApiBearerAuth,
   ApiUnauthorizedResponse,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { SyncCityJob } from '../jobs/sync-city.job';
+import { SyncCityResponse } from '../dto/ingestion-responses';
 
 @ApiTags('ingestion')
+@ApiExtraModels(SyncCityResponse)
 @Controller('ingestion')
 export class IngestionController {
   constructor(private readonly syncCityJob: SyncCityJob) {}
@@ -23,26 +26,7 @@ export class IngestionController {
   @ApiBearerAuth('bearer')
   @ApiOkResponse({
     description: 'City sync completed',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            success: { type: 'boolean' },
-            metrics: {
-              type: 'object',
-              properties: {
-                duration: { type: 'number' },
-                venuesProcessed: { type: 'number' },
-                duplicates: { type: 'number' },
-                errors: { type: 'number' },
-              },
-            },
-          },
-        },
-      },
-    },
+    type: SyncCityResponse,
   })
   @ApiUnauthorizedResponse({ description: 'Unauthorized' })
   async syncCity(@Param('cityId') cityId: string) {

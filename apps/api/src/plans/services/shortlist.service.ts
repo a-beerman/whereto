@@ -148,7 +148,9 @@ export class ShortlistService {
       const preferenceScore = this.calculatePreferenceScore(venue, plan, participants);
 
       // Partner bonus (if venue has active partner)
-      const partnerBonus = (venue as any).partners?.length > 0 ? 10 : 0;
+      const venueWithPartners = venue as Venue & { partners?: Array<unknown> };
+      const partnerBonus =
+        venueWithPartners.partners && venueWithPartners.partners.length > 0 ? 10 : 0;
 
       const totalScore =
         distanceScore * 0.3 + ratingScore * 0.4 + preferenceScore * 0.2 + partnerBonus * 0.1;

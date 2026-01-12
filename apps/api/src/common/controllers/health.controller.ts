@@ -1,10 +1,12 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiOkResponse, ApiResponse, ApiExtraModels } from '@nestjs/swagger';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { InjectConnection } from '@nestjs/typeorm';
 import { Connection } from 'typeorm';
+import { HealthCheckResponse } from '../dto/common-responses';
 
 @ApiTags('health')
+@ApiExtraModels(HealthCheckResponse)
 @Controller('health')
 export class HealthController {
   constructor(
@@ -17,15 +19,7 @@ export class HealthController {
   @ApiOperation({ summary: 'Health check endpoint', operationId: 'Health_check' })
   @ApiOkResponse({
     description: 'Health status',
-    schema: {
-      type: 'object',
-      properties: {
-        status: { type: 'string' },
-        info: { type: 'object' },
-        error: { type: 'object' },
-        details: { type: 'object' },
-      },
-    },
+    type: HealthCheckResponse,
   })
   @ApiResponse({ status: 503, description: 'Service Unavailable' })
   @HealthCheck()

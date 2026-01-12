@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class MetaDto {
+export class Meta {
   @ApiProperty({ description: 'Total number of items' })
   total!: number;
 
@@ -14,17 +14,17 @@ export class MetaDto {
   nextCursor?: string;
 }
 
-export class ItemResponseDto<T = any> {
+export class ItemResponse<T = unknown> {
   @ApiProperty({ description: 'Response payload' })
-  // Using any for Swagger compatibility; concrete type provided via allOf in controllers
+  // Using unknown for Swagger compatibility; concrete type provided via allOf in controllers
   data!: T;
 }
 
-export class PaginatedResponseDto<T = any> {
+export class PaginatedResponse<T = unknown> {
   @ApiProperty({ description: 'List of items', type: 'array' })
-  // Using any[] for Swagger compatibility; item type provided via allOf in controllers
+  // Using unknown[] for Swagger compatibility; item type provided via allOf in controllers
   data!: T[];
 
-  @ApiProperty({ description: 'Pagination metadata', type: MetaDto })
-  meta!: MetaDto;
+  @ApiProperty({ description: 'Pagination metadata', type: Meta })
+  meta!: Meta;
 }

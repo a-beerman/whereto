@@ -26,7 +26,12 @@ export class City {
   centerLng!: number;
 
   @Column({ type: 'jsonb', nullable: true })
-  bounds?: any;
+  bounds?: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   timezone?: string;

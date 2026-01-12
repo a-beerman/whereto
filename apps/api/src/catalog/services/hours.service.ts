@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { OpeningHours, OpeningHoursPeriod } from '../dto/venue-response';
 
 @Injectable()
 export class HoursService {
   /**
    * Check if venue is open at a specific date/time
    */
-  isOpenAt(hours: any, date: Date, time?: string): boolean {
+  isOpenAt(hours: OpeningHours | null | undefined, date: Date, time?: string): boolean {
     if (!hours) {
       return false; // Unknown hours = not open
     }
@@ -17,7 +18,7 @@ export class HoursService {
 
     // If we have weekday_text (human-readable format)
     if (hours.weekday_text && Array.isArray(hours.weekday_text)) {
-      return this.isOpenFromWeekdayText(hours.weekday_text, date, time);
+      return this.isOpenFromWeekdayText(hours.weekday_text, date);
     }
 
     return false;
@@ -26,14 +27,19 @@ export class HoursService {
   /**
    * Check if open using Google Places periods format
    */
-  private isOpenFromPeriods(periods: any[], date: Date, time?: string): boolean {
+  private isOpenFromPeriods(periods: OpeningHoursPeriod[], date: Date, time?: string): boolean {
     const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const checkTime = time
       ? this.parseTime(time)
       : { hours: date.getHours(), minutes: date.getMinutes() };
 
     // Google uses 0 = Sunday, 1 = Monday, etc.
-    const dayPeriods = periods.filter((p) => p.open?.day === dayOfWeek);
+    // Filter periods that match the day - open is required in OpeningHoursPeriod
+    // Use type guard to ensure open exists
+    const dayPeriods = periods.filter(
+      (p): p is OpeningHoursPeriod & { open: NonNullable<OpeningHoursPeriod['open']> } =>
+        p.open !== null && p.open !== undefined && p.open.day === dayOfWeek,
+    );
 
     if (dayPeriods.length === 0) {
       return false; // Closed on this day
@@ -60,7 +66,7 @@ export class HoursService {
   /**
    * Check if open using weekday_text format (fallback)
    */
-  private isOpenFromWeekdayText(weekdayText: string[], date: Date, time?: string): boolean {
+  private isOpenFromWeekdayText(weekdayText: string[], date: Date): boolean {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const dayName = dayNames[date.getDay()];
 
@@ -119,7 +125,7 @@ export class HoursService {
   /**
    * Format hours for display
    */
-  formatHours(hours: any): string[] {
+  formatHours(hours: OpeningHours | null | undefined): string[] {
     if (!hours) {
       return [];
     }
@@ -139,12 +145,16 @@ export class HoursService {
   /**
    * Convert periods to weekday_text format
    */
-  private formatPeriodsToWeekdayText(periods: any[]): string[] {
+  private formatPeriodsToWeekdayText(periods: OpeningHoursPeriod[]): string[] {
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
     const result: string[] = [];
 
     for (let day = 0; day < 7; day++) {
-      const dayPeriods = periods.filter((p) => p.open?.day === day);
+      // Filter periods that match the day - use type guard to ensure open exists
+      const dayPeriods = periods.filter(
+        (p): p is OpeningHoursPeriod & { open: NonNullable<OpeningHoursPeriod['open']> } =>
+          p.open !== null && p.open !== undefined && p.open.day === day,
+      );
       const dayName = dayNames[day];
 
       if (dayPeriods.length === 0) {

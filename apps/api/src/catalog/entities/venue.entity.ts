@@ -8,7 +8,6 @@ import {
   JoinColumn,
   OneToMany,
   Index,
-  ValueTransformer,
 } from 'typeorm';
 import { City } from './city.entity';
 import { VenueSource } from './venue-source.entity';
@@ -96,7 +95,13 @@ export class Venue {
   photoRefs?: string[];
 
   @Column({ type: 'jsonb', nullable: true })
-  hours?: any;
+  hours?: {
+    periods?: Array<{
+      open: { day: number; time: string };
+      close?: { day: number; time: string };
+    }>;
+    weekday_text?: string[];
+  };
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone?: string;

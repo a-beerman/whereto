@@ -1,5 +1,4 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { VenuesService } from './venues.service';
 import { VenueRepository } from '../repositories/venue.repository';
 import { PhotoService } from './photo.service';
@@ -18,7 +17,7 @@ describe('VenuesService', () => {
     search: jest.fn(),
     findById: jest.fn(),
     applyOverrides: jest.fn(),
-  };
+  } as jest.Mocked<VenueRepository>;
 
   const mockPhotoService = {
     getPhotoUrls: jest.fn(),
@@ -81,8 +80,10 @@ describe('VenuesService', () => {
       // Assert
       expect(result.venues).toHaveLength(1);
       expect(result.total).toBe(1);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venueRepository.search).toHaveBeenCalledWith(filters);
-      expect(venueRepository.applyOverrides).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(venueRepository.applyOverrides).toHaveBeenCalledTimes(1);
     });
 
     it('should apply overrides to venues', async () => {
@@ -112,6 +113,7 @@ describe('VenuesService', () => {
       const result = await service.search(filters);
 
       // Assert
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venueRepository.applyOverrides).toHaveBeenCalledWith(mockVenue, mockOverrides);
       expect(result.venues[0].name).toBe('Overridden Name');
     });
@@ -133,6 +135,7 @@ describe('VenuesService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result?.id).toBe(venueId);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venueRepository.findById).toHaveBeenCalledWith(venueId);
     });
 
@@ -146,6 +149,7 @@ describe('VenuesService', () => {
 
       // Assert
       expect(result).toBeNull();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venueRepository.findById).toHaveBeenCalledWith(venueId);
     });
   });

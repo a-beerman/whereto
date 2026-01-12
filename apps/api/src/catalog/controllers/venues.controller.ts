@@ -1,24 +1,30 @@
-import { Controller, Get, Param, Query, NotFoundException, Req } from '@nestjs/common';
+import { Controller, Get, Param, Query, NotFoundException, Req, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiParam,
   ApiQuery,
   ApiOkResponse,
   ApiNotFoundResponse,
   ApiExtraModels,
   ApiHeader,
-  getSchemaPath,
 } from '@nestjs/swagger';
 import { VenuesService } from '../services/venues.service';
-import { VenueFiltersDto } from '../dto/venue-filters.dto';
-import { VenueResponseDto } from '../dto/venue-response.dto';
+import { VenueFilters } from '../dto/venue-filters';
+import { VenueResponse } from '../dto/venue-response';
 import { MetricsService } from '../../common/services/metrics.service';
-import { ItemResponseDto, PaginatedResponseDto, MetaDto } from '../../common/dto/response.dto';
+import { ItemResponse, PaginatedResponse, Meta } from '../../common/dto/response';
+import { VenuesResponse, VenueDetailsResponse } from '../dto/catalog-responses';
 
 @ApiTags('catalog')
-@ApiExtraModels(VenueResponseDto, ItemResponseDto, PaginatedResponseDto, MetaDto)
+@ApiExtraModels(
+  VenueResponse,
+  ItemResponse,
+  PaginatedResponse,
+  Meta,
+  VenuesResponse,
+  VenueDetailsResponse,
+)
 @Controller('venues')
 export class VenuesController {
   constructor(
@@ -35,19 +41,7 @@ export class VenuesController {
   })
   @ApiOkResponse({
     description: 'List of venues matching the search criteria',
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(PaginatedResponseDto) },
-        {
-          properties: {
-            data: {
-              type: 'array',
-              items: { $ref: getSchemaPath(VenueResponseDto) },
-            },
-          },
-        },
-      ],
-    },
+    type: VenuesResponse,
   })
   @ApiQuery({ name: 'q', required: false, description: 'Search query (name, address)' })
   @ApiQuery({ name: 'cityId', required: false, description: 'Filter by city ID' })
@@ -79,10 +73,10 @@ export class VenuesController {
     description: 'Sort order: "distance", "rating", "name"',
   })
   async findAll(
-    @Query() filters: VenueFiltersDto,
-    @Req() req: any,
+    @Query() filters: VenueFilters,
+    @Req() req: Request,
   ): Promise<{
-    data: VenueResponseDto[];
+    data: VenueResponse[];
     meta: {
       total: number;
       limit: number;
@@ -90,19 +84,39 @@ export class VenuesController {
       nextCursor?: string;
     };
   }> {
-    const result = await this.venuesService.search(filters);
+    // Convert DTO to service filters interface
+    const serviceFilters: VenueFilters = {
+      cityId: filters.cityId,
+      q: filters.q,
+      category: filters.category,
+      lat: filters.lat,
+      lng: filters.lng,
+      radiusMeters: filters.radiusMeters,
+      bbox: filters.bbox,
+      minRating: filters.minRating,
+      openNow: filters.openNow,
+      limit: filters.limit,
+      offset: filters.offset,
+      cursor: filters.cursor,
+      sort: filters.sort,
+    };
+    const result = await this.venuesService.search(serviceFilters);
 
     // Track search event
+    const headers = req.headers as unknown as Record<string, string | string[] | undefined>;
+    const userIdHeader = headers['x-user-id'];
+    const userId = userIdHeader
+      ? Array.isArray(userIdHeader)
+        ? userIdHeader[0]
+        : userIdHeader
+      : undefined;
+
     this.metricsService.trackProductEvent({
       event: 'search',
-      userId: ((req.headers as any)['x-user-id'] as string | string[] | undefined)
-        ? Array.isArray((req.headers as any)['x-user-id'])
-          ? (req.headers as any)['x-user-id'][0]
-          : (req.headers as any)['x-user-id']
-        : undefined,
-      cityId: filters.cityId,
-      query: filters.q,
-      category: Array.isArray(filters.category) ? filters.category.join(',') : filters.category,
+      userId,
+      cityId: filters.cityId ?? undefined,
+      query: filters.q ?? undefined,
+      category: filters.category ?? undefined,
       resultCount: result.total,
       timestamp: new Date(),
     });
@@ -128,32 +142,27 @@ export class VenuesController {
   @ApiParam({ name: 'id', description: 'Venue ID (UUID)' })
   @ApiOkResponse({
     description: 'Venue details',
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(ItemResponseDto) },
-        {
-          properties: {
-            data: { $ref: getSchemaPath(VenueResponseDto) },
-          },
-        },
-      ],
-    },
+    type: VenueDetailsResponse,
   })
   @ApiNotFoundResponse({ description: 'Venue not found' })
-  async findOne(@Param('id') id: string, @Req() req: any): Promise<{ data: VenueResponseDto }> {
+  async findOne(@Param('id') id: string, @Req() req: Request): Promise<{ data: VenueResponse }> {
     const venue = await this.venuesService.findById(id);
     if (!venue) {
       throw new NotFoundException(`Venue with id ${id} not found`);
     }
 
     // Track open_place event
+    const headers = req.headers as unknown as Record<string, string | string[] | undefined>;
+    const userIdHeader = headers['x-user-id'];
+    const userId = userIdHeader
+      ? Array.isArray(userIdHeader)
+        ? userIdHeader[0]
+        : userIdHeader
+      : undefined;
+
     this.metricsService.trackProductEvent({
       event: 'open_place',
-      userId: ((req.headers as any)['x-user-id'] as string | string[] | undefined)
-        ? Array.isArray((req.headers as any)['x-user-id'])
-          ? (req.headers as any)['x-user-id'][0]
-          : (req.headers as any)['x-user-id']
-        : undefined,
+      userId,
       venueId: id,
       cityId: venue.cityId,
       timestamp: new Date(),

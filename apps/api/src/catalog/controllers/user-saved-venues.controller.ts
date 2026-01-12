@@ -1,33 +1,26 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
-  Body,
-  Query,
-  UseGuards,
-  Request,
-} from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, Request } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
-  ApiResponse,
   ApiParam,
   ApiQuery,
   ApiBody,
   ApiOkResponse,
   ApiHeader,
   ApiExtraModels,
-  getSchemaPath,
 } from '@nestjs/swagger';
-import { VenueResponseDto } from '../dto/venue-response.dto';
+import { VenueResponse } from '../dto/venue-response';
 import { UserSavedVenuesService } from '../services/user-saved-venues.service';
-import { SaveVenueDto } from '../dto/save-venue.dto';
+import { SaveVenue } from '../dto/save-venue';
 import { MetricsService } from '../../common/services/metrics.service';
 import { IsNumber, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PaginatedResponseDto, MetaDto } from '../../common/dto/response.dto';
+import { PaginatedResponse, Meta } from '../../common/dto/response';
+import {
+  GetSavedVenuesResponse,
+  SaveVenueResponse,
+  RemoveSavedVenueResponse,
+} from '../dto/user-saved-venues-responses';
 
 // TODO: Implement Telegram auth guard
 // For now, we'll use a simple user ID from headers/query
@@ -45,7 +38,14 @@ class PaginationDto {
 }
 
 @ApiTags('catalog')
-@ApiExtraModels(VenueResponseDto, PaginatedResponseDto, MetaDto)
+@ApiExtraModels(
+  VenueResponse,
+  PaginatedResponse,
+  Meta,
+  GetSavedVenuesResponse,
+  SaveVenueResponse,
+  RemoveSavedVenueResponse,
+)
 @Controller('me/saved')
 export class UserSavedVenuesController {
   constructor(
@@ -57,7 +57,8 @@ export class UserSavedVenuesController {
   private getUserId(req: Request): string {
     // For now, use a header or query param
     // In production, extract from Telegram initData
-    const userId = (req.headers as any)['x-user-id'];
+    const headers = req.headers as unknown as Record<string, string | string[] | undefined>;
+    const userId = headers['x-user-id'];
     if (Array.isArray(userId)) {
       return userId[0] || 'default-user-id';
     }
@@ -75,19 +76,7 @@ export class UserSavedVenuesController {
   @ApiQuery({ name: 'offset', required: false, description: 'Pagination offset' })
   @ApiOkResponse({
     description: 'List of saved venues',
-    schema: {
-      allOf: [
-        { $ref: getSchemaPath(PaginatedResponseDto) },
-        {
-          properties: {
-            data: {
-              type: 'array',
-              items: { $ref: getSchemaPath(VenueResponseDto) },
-            },
-          },
-        },
-      ],
-    },
+    type: GetSavedVenuesResponse,
   })
   async getSavedVenues(@Request() req: Request, @Query() query: PaginationDto) {
     const userId = this.getUserId(req);
@@ -97,17 +86,12 @@ export class UserSavedVenuesController {
   @Post()
   @ApiOperation({ summary: 'Save a venue for user', operationId: 'UserSavedVenues_saveVenue' })
   @ApiHeader({ name: 'X-User-Id', description: 'User ID from Telegram', required: false })
-  @ApiBody({ type: SaveVenueDto })
+  @ApiBody({ type: SaveVenue })
   @ApiOkResponse({
     description: 'Venue saved successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-      },
-    },
+    type: SaveVenueResponse,
   })
-  async saveVenue(@Request() req: Request, @Body() dto: SaveVenueDto) {
+  async saveVenue(@Request() req: Request, @Body() dto: SaveVenue) {
     const userId = this.getUserId(req);
     await this.savedVenuesService.saveVenue(userId, dto.venueId);
 
@@ -128,12 +112,7 @@ export class UserSavedVenuesController {
   @ApiParam({ name: 'venueId', description: 'Venue ID (UUID)' })
   @ApiOkResponse({
     description: 'Venue removed successfully',
-    schema: {
-      type: 'object',
-      properties: {
-        message: { type: 'string' },
-      },
-    },
+    type: RemoveSavedVenueResponse,
   })
   async removeSavedVenue(@Request() req: Request, @Param('venueId') venueId: string) {
     const userId = this.getUserId(req);

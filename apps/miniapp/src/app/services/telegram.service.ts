@@ -6,41 +6,20 @@ import WebApp from '@twa-dev/sdk';
 })
 export class TelegramService {
   private tg = WebApp;
-  private readonly isMockMode: boolean;
-  private readonly mockUser: any | null;
-  private readonly mockChatId: string | undefined;
-  private readonly mockInitData: string | undefined;
 
   constructor() {
     // Initialize Telegram WebApp
     this.tg.ready();
     this.tg.expand();
 
-    // Set header color to match theme
-    this.tg.setHeaderColor('bg_color');
-
-    // Mock mode detection via query params for browser debugging
-    const url = new URL(window.location.href);
-    this.isMockMode = (url.searchParams.get('mock') || '').toLowerCase() === 'true';
-    if (this.isMockMode) {
-      // Optional overrides via query params
-      const userIdParam = url.searchParams.get('userId') || '123456';
-      const firstName = url.searchParams.get('firstName') || 'Dev';
-      const lastName = url.searchParams.get('lastName') || 'User';
-      const username = url.searchParams.get('username') || 'dev_user';
-      this.mockChatId = url.searchParams.get('chatId') || '999999';
-      this.mockInitData = url.searchParams.get('initData') || 'mock-init-data';
-
-      this.mockUser = {
-        id: Number(userIdParam),
-        first_name: firstName,
-        last_name: lastName,
-        username,
-        language_code: 'en',
-        is_premium: false,
-      };
-    } else {
-      this.mockUser = null;
+    // Set header color to match theme (only if supported)
+    // Note: setHeaderColor is not supported in Telegram WebApp version 6.0+
+    try {
+      if (this.tg.version && parseFloat(this.tg.version) < 6.0) {
+        this.tg.setHeaderColor('bg_color');
+      }
+    } catch (error) {
+      // Ignore if not supported
     }
   }
 
@@ -55,7 +34,6 @@ export class TelegramService {
    * Get current user info
    */
   getUserInfo() {
-    if (this.isMockMode) return this.mockUser;
     return this.tg.initDataUnsafe?.user;
   }
 
@@ -63,7 +41,6 @@ export class TelegramService {
    * Get chat ID if opened from a group
    */
   getChatId(): string | undefined {
-    if (this.isMockMode) return this.mockChatId;
     return this.tg.initDataUnsafe?.chat?.id?.toString();
   }
 
@@ -130,34 +107,14 @@ export class TelegramService {
    * Show popup alert
    */
   showAlert(message: string) {
-    // In Telegram, prefer native alert; otherwise fallback to browser alert
-    try {
-      if (this.isInTelegram()) {
-        this.tg.showAlert(message);
-      } else {
-        window.alert(message);
-      }
-    } catch (e) {
-      // Fallback when method unsupported (older Telegram versions)
-      window.alert(message);
-    }
+    this.tg.showAlert(message);
   }
 
   /**
    * Show popup confirmation
    */
   showConfirm(message: string, callback: (confirmed: boolean) => void) {
-    try {
-      if (this.isInTelegram()) {
-        this.tg.showConfirm(message, callback);
-      } else {
-        const result = window.confirm(message);
-        callback(result);
-      }
-    } catch (e) {
-      const result = window.confirm(message);
-      callback(result);
-    }
+    this.tg.showConfirm(message, callback);
   }
 
   /**
@@ -178,7 +135,6 @@ export class TelegramService {
    * Get init data (for API authentication)
    */
   getInitData(): string {
-    if (this.isMockMode) return this.mockInitData || '';
     return this.tg.initData;
   }
 
@@ -186,14 +142,7 @@ export class TelegramService {
    * Check if app is running in Telegram
    */
   isInTelegram(): boolean {
-    return this.isMockMode || this.tg.initData !== '';
-  }
-
-  /**
-   * Check if running in dev mock mode
-   */
-  isMock(): boolean {
-    return this.isMockMode;
+    return this.tg.initData !== '';
   }
 
   /**

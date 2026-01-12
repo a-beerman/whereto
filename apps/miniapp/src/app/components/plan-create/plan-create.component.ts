@@ -4,7 +4,7 @@ import { Router } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
 import { CatalogApiService } from '../../services/catalog-api.service';
 import { PlanApiService } from '../../services/plan-api.service';
-import { CreatePlanDto } from '@whereto/shared/api-client-angular';
+import { CreatePlan } from '@whereto/shared/api-client-angular';
 import { PlanStateService } from '../../services/plan-state.service';
 
 @Component({
@@ -69,7 +69,7 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
 
     if (!user) {
       // If not running inside Telegram, allow mock mode for browser debugging
-      if (!this.telegram.isInTelegram() && this.telegram.isMock()) {
+      if (!this.telegram.isInTelegram()) {
         // Proceed with mocked user; no error
       } else {
         // Guide the user to open via Telegram
@@ -146,7 +146,7 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
     const user = this.telegram.getUserInfo();
 
     // Guard: ensure running inside Telegram WebApp
-    if (!this.telegram.isInTelegram() && !this.telegram.isMock()) {
+    if (!this.telegram.isInTelegram()) {
       this.error.set('Откройте мини‑приложение из Telegram через кнопку /miniapp');
       return;
     }
@@ -159,14 +159,14 @@ export class PlanCreateComponent implements OnInit, OnDestroy {
     this.loading.set(true);
     this.error.set(null);
 
-    const planData: CreatePlanDto = {
+    const planData: CreatePlan = {
       telegramChatId: state.chatId || user.id.toString(),
       initiatorId: user.id.toString(),
       date: state.date,
       time: state.time,
       cityId: state.cityId,
       area: state.area,
-      budget: state.budget as CreatePlanDto.BudgetEnum | undefined,
+      budget: state.budget as CreatePlan.BudgetEnum | undefined,
       format: state.format,
     };
 

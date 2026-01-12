@@ -1,10 +1,10 @@
-import { IsString, IsOptional, IsObject, ValidateNested, IsBoolean, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsObject, ValidateNested, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { BudgetLevel } from './create-plan.dto';
+import { BudgetLevel } from './create-plan';
 import { ApiEnumPropertyOptional } from '../../common/decorators/api-enum-property.decorator';
 
-class PreferencesDto {
+class Preferences {
   @ApiPropertyOptional({ description: 'Format/type', example: 'dinner' })
   @IsOptional()
   @IsString()
@@ -38,17 +38,17 @@ class PreferencesDto {
   kidsFriendly?: boolean;
 }
 
-export class JoinPlanDto {
+export class JoinPlan {
   @ApiProperty({ description: 'Telegram user ID' })
   @IsString()
   userId!: string; // Telegram user ID
 
-  @ApiPropertyOptional({ description: 'User preferences', type: PreferencesDto })
+  @ApiPropertyOptional({ description: 'User preferences', type: Preferences })
   @IsOptional()
   @IsObject()
   @ValidateNested()
-  @Type(() => PreferencesDto)
-  preferences?: PreferencesDto;
+  @Type(() => Preferences)
+  preferences?: Preferences;
 
   @ApiPropertyOptional({ description: 'User location latitude (for midpoint calculation)' })
   @IsOptional()

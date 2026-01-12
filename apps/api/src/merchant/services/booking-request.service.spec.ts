@@ -4,6 +4,7 @@ import { BookingRequestService } from './booking-request.service';
 import { BookingRequestRepository } from '../repositories/booking-request.repository';
 import { VenuePartnerRepository } from '../repositories/venue-partner.repository';
 import { BookingRequest } from '../entities/booking-request.entity';
+import { VenuePartner } from '../entities/venue-partner.entity';
 
 describe('BookingRequestService', () => {
   let service: BookingRequestService;
@@ -80,8 +81,10 @@ describe('BookingRequestService', () => {
       // Assert
       expect(result.status).toBe('confirmed');
       expect(result.merchantUserId).toBe(merchantUserId);
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venuePartnerRepository.hasAccess).toHaveBeenCalledWith(merchantUserId, 'venue-123');
-      expect(bookingRequestRepository.update).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(bookingRequestRepository.update).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when booking request does not exist', async () => {
@@ -161,18 +164,23 @@ describe('BookingRequestService', () => {
       // Assert
       expect(result.status).toBe('rejected');
       expect(result.rejectionReason).toBe('Fully booked');
-      expect(bookingRequestRepository.update).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(bookingRequestRepository.update).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('createBookingRequest', () => {
     it('should create booking request for partner venue', async () => {
       // Arrange
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const mockPartner = {
         id: 'partner-123',
         venueId: 'venue-123',
+        merchantUserId: 'merchant-123',
         isActive: true,
-      };
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as VenuePartner;
 
       const mockBookingRequest = {
         id: 'request-123',
@@ -184,7 +192,8 @@ describe('BookingRequestService', () => {
         status: 'pending',
       } as BookingRequest;
 
-      venuePartnerRepository.findByVenueId.mockResolvedValue(mockPartner as any);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      venuePartnerRepository.findByVenueId.mockResolvedValue(mockPartner);
       bookingRequestRepository.create = jest.fn().mockResolvedValue(mockBookingRequest);
 
       // Act
@@ -199,6 +208,7 @@ describe('BookingRequestService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.venueId).toBe('venue-123');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(venuePartnerRepository.findByVenueId).toHaveBeenCalledWith('venue-123');
     });
 

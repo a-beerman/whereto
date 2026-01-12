@@ -7,7 +7,6 @@ import {
   JoinColumn,
   Index,
   Unique,
-  ValueTransformer,
 } from 'typeorm';
 import { Venue } from './venue.entity';
 import { Coordinates } from '../types/coordinates.type';

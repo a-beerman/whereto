@@ -19,7 +19,10 @@ export interface GooglePlace {
   photos?: Array<{ photo_reference: string }>;
   opening_hours?: {
     weekday_text?: string[];
-    periods?: any[];
+    periods?: Array<{
+      open?: { day: number; time: string };
+      close?: { day: number; time: string };
+    }>;
   };
   business_status?: string;
   phone?: string;
@@ -81,12 +84,13 @@ export class GooglePlacesService {
         },
       });
 
-      if (response.data.status !== 'OK' && response.data.status !== 'ZERO_RESULTS') {
-        this.logger.error(`Google Places API error: ${response.data.status}`);
+      const status = response.data.status as string;
+      if (status !== 'OK' && status !== 'ZERO_RESULTS') {
+        this.logger.error(`Google Places API error: ${status}`);
         if (response.data.error_message) {
           this.logger.error(`Error message: ${response.data.error_message}`);
         }
-        throw new Error(`Google Places API error: ${response.data.status}`);
+        throw new Error(`Google Places API error: ${status}`);
       }
 
       const results: GooglePlace[] = (response.data.results || []).map((place) => ({
@@ -150,11 +154,12 @@ export class GooglePlacesService {
         },
       });
 
-      if (response.data.status !== 'OK') {
-        if (response.data.status === 'NOT_FOUND') {
+      const status = response.data.status as string;
+      if (status !== 'OK') {
+        if (status === 'NOT_FOUND') {
           return null;
         }
-        this.logger.error(`Google Places Details API error: ${response.data.status}`);
+        this.logger.error(`Google Places Details API error: ${status}`);
         return null;
       }
 
@@ -166,7 +171,7 @@ export class GooglePlacesService {
       // Extract social media links from website if available
       // Note: Google Places API doesn't provide direct social media links,
       // but we can try to extract them from website or other sources if needed
-      const socialMedia = this.extractSocialMedia(place.website);
+      const socialMedia = this.extractSocialMedia();
 
       return {
         place_id: place.place_id || placeId,
@@ -185,7 +190,23 @@ export class GooglePlacesService {
         opening_hours: place.opening_hours
           ? {
               weekday_text: place.opening_hours.weekday_text || [],
-              periods: place.opening_hours.periods || [],
+              periods: (place.opening_hours.periods || [])
+                .filter(
+                  (
+                    p,
+                  ): p is {
+                    open: { day: number; time: string };
+                    close?: { day: number; time: string };
+                  } =>
+                    p.open !== undefined &&
+                    p.open.time !== undefined &&
+                    typeof p.open.time === 'string',
+                )
+                .map((p) => ({
+                  open: { day: p.open.day, time: p.open.time },
+                  close:
+                    p.close && p.close.time ? { day: p.close.day, time: p.close.time } : undefined,
+                })),
             }
           : undefined,
         business_status: place.business_status,
@@ -233,7 +254,7 @@ export class GooglePlacesService {
    * Note: Google Places API doesn't provide direct social media links
    * This is a placeholder for future enhancement (could parse website HTML or use other sources)
    */
-  private extractSocialMedia(website?: string):
+  private extractSocialMedia():
     | {
         facebook?: string;
         instagram?: string;

@@ -1,11 +1,11 @@
 import './polyfills';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe, Logger } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder, getSchemaPath } from '@nestjs/swagger';
+import { ValidationPipe, Logger, BadRequestException } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { VenueResponseDto } from './catalog/dto/venue-response.dto';
+import { VenueResponse } from './catalog/dto/venue-response';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -22,6 +22,19 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
+      exceptionFactory: (errors) => {
+        const messages = errors.map((error) => {
+          const constraints = error.constraints
+            ? Object.values(error.constraints).join(', ')
+            : 'Validation failed';
+          return `${error.property}: ${constraints}`;
+        });
+        return new BadRequestException({
+          message: 'Validation failed',
+          errors: messages,
+          details: errors,
+        });
+      },
     }),
   );
 
@@ -37,9 +50,51 @@ async function bootstrap() {
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
 
   // CORS
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:4200';
+  const corsOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : ['http://localhost:4200'];
+
+  // Allow ngrok origins dynamically (they change frequently)
+  const allowNgrok = process.env.CORS_ALLOW_NGROK !== 'false';
+
   app.enableCors({
-    origin: corsOrigin,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      // Check if origin is in allowed list
+      if (corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      // Allow ngrok origins if enabled
+      if (
+        allowNgrok &&
+        (origin.includes('.ngrok-free.dev') ||
+          origin.includes('.ngrok.io') ||
+          origin.includes('.ngrok-free.app'))
+      ) {
+        callback(null, true);
+        return;
+      }
+
+      // Allow Cloudflare Tunnel origins if enabled (default: true)
+      const allowCloudflare = process.env.CORS_ALLOW_CLOUDFLARE !== 'false';
+      if (allowCloudflare && origin.includes('.trycloudflare.com')) {
+        callback(null, true);
+        return;
+      }
+
+      // Reject other origins
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   });
 
@@ -78,7 +133,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config, {
-    extraModels: [VenueResponseDto],
+    extraModels: [VenueResponse],
   });
   // Swagger is set up at root level (not under api/v1 prefix) for easier access
   SwaggerModule.setup('docs', app, document, {
@@ -97,4 +152,4 @@ async function bootstrap() {
   logger.log(`🚀 API is running on: http://localhost:${port}/${apiPrefix}/${apiVersion}`);
 }
 
-bootstrap();
+void bootstrap();

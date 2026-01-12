@@ -7,9 +7,9 @@ import {
 import { BookingRequestRepository } from '../repositories/booking-request.repository';
 import { VenuePartnerRepository } from '../repositories/venue-partner.repository';
 import { BookingRequest } from '../entities/booking-request.entity';
-import { ConfirmBookingDto } from '../dto/confirm-booking.dto';
-import { RejectBookingDto } from '../dto/reject-booking.dto';
-import { ProposeTimeDto } from '../dto/propose-time.dto';
+import { ConfirmBooking } from '../dto/confirm-booking';
+import { RejectBooking } from '../dto/reject-booking';
+import { ProposeTime } from '../dto/propose-time';
 
 @Injectable()
 export class BookingRequestService {
@@ -41,7 +41,7 @@ export class BookingRequestService {
   async confirmBooking(
     merchantUserId: string,
     bookingRequestId: string,
-    dto: ConfirmBookingDto,
+    dto: ConfirmBooking,
   ): Promise<BookingRequest> {
     const bookingRequest = await this.bookingRequestRepository.findById(bookingRequestId);
     if (!bookingRequest) {
@@ -70,7 +70,7 @@ export class BookingRequestService {
 
     const confirmedTime = dto.confirmedTime
       ? new Date(dto.confirmedTime)
-      : new Date(`${bookingRequest.requestedDate}T${bookingRequest.requestedTime}`);
+      : new Date(`${String(bookingRequest.requestedDate)}T${String(bookingRequest.requestedTime)}`);
 
     return this.bookingRequestRepository.update(bookingRequestId, {
       status: 'confirmed',
@@ -84,7 +84,7 @@ export class BookingRequestService {
   async rejectBooking(
     merchantUserId: string,
     bookingRequestId: string,
-    dto: RejectBookingDto,
+    dto: RejectBooking,
   ): Promise<BookingRequest> {
     const bookingRequest = await this.bookingRequestRepository.findById(bookingRequestId);
     if (!bookingRequest) {
@@ -122,7 +122,7 @@ export class BookingRequestService {
   async proposeTime(
     merchantUserId: string,
     bookingRequestId: string,
-    dto: ProposeTimeDto,
+    dto: ProposeTime,
   ): Promise<BookingRequest> {
     const bookingRequest = await this.bookingRequestRepository.findById(bookingRequestId);
     if (!bookingRequest) {

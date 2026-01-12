@@ -61,7 +61,7 @@ class VenueEntity {
   photoRefs?: string[];
 
   @Column({ type: 'jsonb', nullable: true })
-  hours?: any;
+  hours?: unknown;
 
   @Column({ type: 'varchar', length: 20, default: 'active' })
   status!: string;
@@ -200,4 +200,4 @@ async function seed() {
   }
 }
 
-seed();
+void seed();

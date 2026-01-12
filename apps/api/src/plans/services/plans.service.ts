@@ -53,7 +53,7 @@ export class PlansService {
   async joinPlan(
     planId: string,
     userId: string,
-    preferences?: any,
+    preferences?: Record<string, unknown>,
     location?: { lat?: number; lng?: number },
   ): Promise<void> {
     const plan = await this.planRepository.findById(planId);
@@ -74,7 +74,10 @@ export class PlansService {
 
   async getShortlist(
     planId: string,
-  ): Promise<{ venues: any[]; meetingPoint: { lat: number; lng: number } }> {
+  ): Promise<{
+    venues: Array<Record<string, unknown>>;
+    meetingPoint: { lat: number; lng: number };
+  }> {
     const plan = await this.planRepository.findById(planId);
     if (!plan) {
       throw new NotFoundException(`Plan with id ${planId} not found`);
@@ -223,7 +226,10 @@ export class PlansService {
     return voteCasts.map((cast) => cast.venueId);
   }
 
-  async closePlan(planId: string, initiatorId: string): Promise<{ plan: Plan; winner: any }> {
+  async closePlan(
+    planId: string,
+    initiatorId: string,
+  ): Promise<{ plan: Plan; winner: Record<string, unknown> }> {
     const plan = await this.planRepository.findById(planId);
     if (!plan) {
       throw new NotFoundException(`Plan with id ${planId} not found`);

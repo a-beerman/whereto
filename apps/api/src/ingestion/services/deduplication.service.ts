@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { VenueRepository } from '../../catalog/repositories/venue.repository';
 import { VenueSourceRepository } from '../../catalog/repositories/venue-source.repository';
 import { Venue } from '../../catalog/entities/venue.entity';
-import { VenueSource } from '../../catalog/entities/venue-source.entity';
 
 @Injectable()
 export class DeduplicationService {

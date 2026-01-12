@@ -4,14 +4,13 @@ import { ActivatedRoute } from '@angular/router';
 import { TelegramService } from '../../services/telegram.service';
 import { PlanApiService } from '../../services/plan-api.service';
 import { CatalogApiService } from '../../services/catalog-api.service';
-import { PlansGetPlanDetails200ResponseData } from '@whereto/shared/api-client-angular';
+import { PlanDetailsData } from '@whereto/shared/api-client-angular';
 import { VoteOption, Venue } from '../../models/types';
-import { VenueCardComponent } from '../venue-card/venue-card.component';
 
 @Component({
   selector: 'app-result',
   standalone: true,
-  imports: [CommonModule, VenueCardComponent],
+  imports: [CommonModule],
   providers: [DatePipe],
   templateUrl: './result.component.html',
   styleUrls: ['./result.component.css'],
@@ -25,7 +24,7 @@ export class ResultComponent implements OnInit {
 
   loading = signal(true);
   error = signal<string | null>(null);
-  plan = signal<PlansGetPlanDetails200ResponseData | null>(null);
+  plan = signal<PlanDetailsData | null>(null);
   winner = signal<VoteOption | null>(null);
 
   ngOnInit() {
@@ -85,7 +84,7 @@ export class ResultComponent implements OnInit {
     });
   }
 
-  private loadWinnerFromVotes(plan: PlansGetPlanDetails200ResponseData) {
+  private loadWinnerFromVotes(plan: PlanDetailsData) {
     // If votes are available in the response, find the winner
     const planWithVotes = plan as any;
     if (

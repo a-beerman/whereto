@@ -15,6 +15,6 @@ export function ApiEnumPropertyOptional(
       enum: enumValues,
       example: example || enumValues[0],
       'x-enum-varnames': enumKeys, // Explicit enum variable names for OpenAPI generator
-    } as any),
+    } as Parameters<typeof ApiPropertyOptional>[0]),
   );
 }

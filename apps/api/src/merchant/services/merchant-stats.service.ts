@@ -16,8 +16,6 @@ export class MerchantStatsService {
   constructor(private readonly bookingRequestRepository: BookingRequestRepository) {}
 
   async getStats(merchantUserId: string, startDate?: Date, endDate?: Date): Promise<MerchantStats> {
-    const filters: any = { merchantUserId };
-
     // Get all requests for this merchant
     const { requests } = await this.bookingRequestRepository.findByMerchant(merchantUserId, {
       limit: 1000, // Get all for stats calculation

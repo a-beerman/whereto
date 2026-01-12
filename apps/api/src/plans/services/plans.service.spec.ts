@@ -10,7 +10,9 @@ import { VenueRepository } from '../../catalog/repositories/venue.repository';
 import { Plan } from '../entities/plan.entity';
 import { Participant } from '../entities/participant.entity';
 import { Vote } from '../entities/vote.entity';
-import { BudgetLevel } from '../dto/create-plan.dto';
+import { BudgetLevel } from '../dto/create-plan';
+import { Venue } from '../../catalog/entities/venue.entity';
+import { VoteCast } from '../entities/vote-cast.entity';
 
 describe('PlansService', () => {
   let service: PlansService;
@@ -18,7 +20,6 @@ describe('PlansService', () => {
   let participantRepository: jest.Mocked<ParticipantRepository>;
   let voteRepository: jest.Mocked<VoteRepository>;
   let voteCastRepository: jest.Mocked<VoteCastRepository>;
-  let shortlistService: jest.Mocked<ShortlistService>;
   let venueRepository: jest.Mocked<VenueRepository>;
 
   const mockPlanRepository = {
@@ -91,7 +92,6 @@ describe('PlansService', () => {
     participantRepository = module.get(ParticipantRepository);
     voteRepository = module.get(VoteRepository);
     voteCastRepository = module.get(VoteCastRepository);
-    shortlistService = module.get(ShortlistService);
     venueRepository = module.get(VenueRepository);
   });
 
@@ -128,10 +128,12 @@ describe('PlansService', () => {
       // Assert
       expect(result).toBeDefined();
       expect(result.id).toBe('plan-123');
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(planRepository.create).toHaveBeenCalledWith({
         ...planData,
         status: 'open',
       });
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(participantRepository.create).toHaveBeenCalledWith({
         planId: 'plan-123',
         userId: 'user-123',
@@ -150,14 +152,21 @@ describe('PlansService', () => {
       } as Plan;
 
       planRepository.findById.mockResolvedValue(mockPlan);
-      participantRepository.upsert.mockResolvedValue(undefined);
+      participantRepository.upsert.mockResolvedValue({
+        id: 'participant-123',
+        planId,
+        userId,
+        joinedAt: new Date(),
+      } as Participant);
 
       // Act
       await service.joinPlan(planId, userId, { cuisine: ['italian'] });
 
       // Assert
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(planRepository.findById).toHaveBeenCalledWith(planId);
-      expect(participantRepository.upsert).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/unbound-method
+      expect(participantRepository.upsert).toHaveBeenCalledTimes(1);
     });
 
     it('should throw NotFoundException when plan does not exist', async () => {
@@ -205,20 +214,35 @@ describe('PlansService', () => {
         planId,
       } as Vote;
 
-      const mockVenue = {
+      const mockVenue: Venue = {
         id: venueId,
-      } as any;
+        cityId: 'city-123',
+        name: 'Test Venue',
+        address: 'Test Address',
+        location: { type: 'Point', coordinates: [0, 0] },
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Venue;
 
       planRepository.findById.mockResolvedValue(mockPlan);
       participantRepository.findByPlanIdAndUserId.mockResolvedValue(mockParticipant);
       voteRepository.findActiveByPlanId.mockResolvedValue(mockVote);
       venueRepository.findById.mockResolvedValue(mockVenue);
-      voteCastRepository.upsert.mockResolvedValue(undefined);
+      voteCastRepository.upsert.mockResolvedValue({
+        id: 'vote-cast-123',
+        voteId: 'vote-123',
+        planId,
+        userId,
+        venueId,
+        castAt: new Date(),
+      } as unknown as VoteCast);
 
       // Act
       await service.castVote(planId, userId, venueId);
 
       // Assert
+      // eslint-disable-next-line @typescript-eslint/unbound-method
       expect(voteCastRepository.upsert).toHaveBeenCalledWith('vote-123', planId, userId, venueId);
     });
 
@@ -262,15 +286,30 @@ describe('PlansService', () => {
         ['venue-456', 3],
       ]);
 
-      const mockWinnerVenue = {
+      const mockWinnerVenue: Venue = {
         id: winnerVenueId,
+        cityId: 'city-123',
         name: 'Winner Venue',
-      } as any;
+        address: 'Winner Address',
+        location: { type: 'Point', coordinates: [0, 0] },
+        status: 'active',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Venue;
 
       planRepository.findById.mockResolvedValue(mockPlan);
       voteRepository.findActiveByPlanId.mockResolvedValue(mockVote);
       voteCastRepository.getVoteCounts.mockResolvedValue(mockVoteCounts);
-      voteRepository.close.mockResolvedValue(undefined);
+      voteRepository.close.mockResolvedValue({
+        id: 'vote-123',
+        planId,
+        status: 'closed',
+        winnerVenueId: winnerVenueId,
+        startedAt: new Date(),
+        endedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Vote);
       planRepository.close.mockResolvedValue({
         ...mockPlan,
         status: 'closed',

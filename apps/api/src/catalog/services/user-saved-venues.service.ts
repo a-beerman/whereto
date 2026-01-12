@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UserSavedVenueRepository } from '../repositories/user-saved-venue.repository';
 import { VenueRepository } from '../repositories/venue.repository';
-import { VenueResponseDto } from '../dto/venue-response.dto';
+import { VenueResponse } from '../dto/venue-response';
+import { Venue } from '../entities/venue.entity';
 
 @Injectable()
 export class UserSavedVenuesService {
@@ -14,7 +15,7 @@ export class UserSavedVenuesService {
     userId: string,
     limit: number = 20,
     offset: number = 0,
-  ): Promise<{ data: VenueResponseDto[]; meta: { total: number; limit: number; offset: number } }> {
+  ): Promise<{ data: VenueResponse[]; meta: { total: number; limit: number; offset: number } }> {
     const result = await this.savedVenueRepository.findByUserId(userId, limit, offset);
 
     const venues = result.items.map((saved) => {
@@ -34,7 +35,7 @@ export class UserSavedVenuesService {
     );
 
     return {
-      data: venuesWithOverrides.map(this.toResponseDto),
+      data: venuesWithOverrides.map((venue) => this.toResponseDto(venue)),
       meta: {
         total: result.total,
         limit,
@@ -62,15 +63,14 @@ export class UserSavedVenuesService {
     return { data: { removed: true } };
   }
 
-  private toResponseDto(venue: any): VenueResponseDto {
+  private toResponseDto(venue: Venue): VenueResponse {
     let lat: number | undefined;
     let lng: number | undefined;
 
-    if (venue.location) {
-      if (typeof venue.location === 'object') {
-        lng = venue.location.x || venue.location.lng;
-        lat = venue.location.y || venue.location.lat;
-      }
+    if (venue.location && venue.location.coordinates) {
+      // Coordinates type: { type: 'Point', coordinates: [lng, lat] }
+      lng = venue.location.coordinates[0];
+      lat = venue.location.coordinates[1];
     }
 
     return {

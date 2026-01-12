@@ -1,10 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Venue } from '../entities/venue.entity';
 import { VenueOverrides } from '../entities/venue-overrides.entity';
-import { calculateBoundingBox, haversineDistance } from '../../utils/geo';
-import { extractLatLng } from '../types/coordinates.type';
+import { calculateBoundingBox } from '../../utils/geo';
 
 export interface VenueFilters {
   cityId?: string;

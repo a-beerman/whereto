@@ -1,4 +1,5 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Request } from 'express';
 import { VenuePartnerRepository } from '../repositories/venue-partner.repository';
 
 @Injectable()
@@ -6,8 +7,11 @@ export class MerchantAuthGuard implements CanActivate {
   constructor(private readonly venuePartnerRepository: VenuePartnerRepository) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const merchantUserId = request.headers['x-merchant-user-id'] as string;
+    const request = context.switchToHttp().getRequest<Request & { merchantUserId?: string }>();
+    const headers = request.headers as unknown as Record<string, string | string[] | undefined>;
+    const merchantUserId = Array.isArray(headers['x-merchant-user-id'])
+      ? headers['x-merchant-user-id'][0]
+      : headers['x-merchant-user-id'];
 
     if (!merchantUserId) {
       throw new UnauthorizedException('Merchant user ID is required');

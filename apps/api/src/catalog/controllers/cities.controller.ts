@@ -5,10 +5,13 @@ import {
   ApiParam,
   ApiOkResponse,
   ApiNotFoundResponse,
+  ApiExtraModels,
 } from '@nestjs/swagger';
 import { CitiesService } from '../services/cities.service';
+import { CitiesResponse, CityResponse } from '../dto/catalog-responses';
 
 @ApiTags('catalog')
+@ApiExtraModels(CitiesResponse, CityResponse)
 @Controller('cities')
 export class CitiesController {
   constructor(private readonly citiesService: CitiesService) {}
@@ -17,31 +20,7 @@ export class CitiesController {
   @ApiOperation({ summary: 'List available cities', operationId: 'Cities_findAll' })
   @ApiOkResponse({
     description: 'List of cities',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'array',
-          items: {
-            type: 'object',
-            properties: {
-              id: { type: 'string' },
-              name: { type: 'string' },
-              countryCode: { type: 'string' },
-              center: {
-                type: 'object',
-                properties: {
-                  lat: { type: 'number' },
-                  lng: { type: 'number' },
-                },
-              },
-              timezone: { type: 'string' },
-              isActive: { type: 'boolean' },
-            },
-          },
-        },
-      },
-    },
+    type: CitiesResponse,
   })
   async findAll() {
     const cities = await this.citiesService.findAll();
@@ -53,28 +32,7 @@ export class CitiesController {
   @ApiParam({ name: 'id', description: 'City ID (UUID)' })
   @ApiOkResponse({
     description: 'City details',
-    schema: {
-      type: 'object',
-      properties: {
-        data: {
-          type: 'object',
-          properties: {
-            id: { type: 'string' },
-            name: { type: 'string' },
-            countryCode: { type: 'string' },
-            center: {
-              type: 'object',
-              properties: {
-                lat: { type: 'number' },
-                lng: { type: 'number' },
-              },
-            },
-            timezone: { type: 'string' },
-            isActive: { type: 'boolean' },
-          },
-        },
-      },
-    },
+    type: CityResponse,
   })
   @ApiNotFoundResponse({ description: 'City not found' })
   async findOne(@Param('id') id: string) {

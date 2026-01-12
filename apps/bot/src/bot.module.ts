@@ -1,32 +1,46 @@
 import { Telegraf } from 'telegraf';
 import { ApiClientService } from './services/api-client.service';
 import { StateService } from './services/state.service';
+import { HeroService } from './services/hero.service';
+import { ScheduledResultsService } from './services/scheduled-results.service';
 import { StartHandler } from './handlers/start.handler';
 import { SearchHandler } from './handlers/search.handler';
 import { VenueHandler } from './handlers/venue.handler';
 import { SavedHandler } from './handlers/saved.handler';
 import { PlanHandler } from './handlers/plan.handler';
 import { MiniAppHandler } from './handlers/miniapp.handler';
+import { InlineHandler } from './handlers/inline.handler';
 
 export class BotModule {
   private readonly apiClient: ApiClientService;
   private readonly stateService: StateService;
+  private readonly heroService: HeroService;
+  private readonly scheduledResults: ScheduledResultsService;
   private readonly startHandler: StartHandler;
   private readonly searchHandler: SearchHandler;
   private readonly venueHandler: VenueHandler;
   private readonly savedHandler: SavedHandler;
   private readonly planHandler: PlanHandler;
   private readonly miniAppHandler: MiniAppHandler;
+  private readonly inlineHandler: InlineHandler;
 
   constructor(private readonly bot: Telegraf) {
     this.apiClient = new ApiClientService();
     this.stateService = new StateService();
+    this.heroService = new HeroService();
+    this.scheduledResults = new ScheduledResultsService(this.bot, this.apiClient, this.heroService);
     this.startHandler = new StartHandler(this.apiClient, this.stateService);
     this.searchHandler = new SearchHandler(this.apiClient, this.stateService);
     this.venueHandler = new VenueHandler(this.apiClient, this.stateService);
     this.savedHandler = new SavedHandler(this.apiClient);
-    this.planHandler = new PlanHandler(this.apiClient, this.stateService);
+    this.planHandler = new PlanHandler(
+      this.apiClient,
+      this.stateService,
+      this.heroService,
+      this.scheduledResults,
+    );
     this.miniAppHandler = new MiniAppHandler();
+    this.inlineHandler = new InlineHandler(this.apiClient);
   }
 
   registerHandlers() {
@@ -331,6 +345,12 @@ _Каждый участник должен сначала выбрать гор
         // User removed their vote
         await this.planHandler.handlePollAnswerRemoved(userId, pollId);
       }
+    });
+
+    // ============ Inline Query Handler ============
+
+    this.bot.on('inline_query', async (ctx) => {
+      await this.inlineHandler.handleInlineQuery(ctx);
     });
 
     // ============ Text Message Handler ============

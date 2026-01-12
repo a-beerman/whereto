@@ -32,9 +32,9 @@ async function runMigrations() {
     const migrationsTableExists = await queryRunner.hasTable('migrations');
 
     if (migrationsTableExists) {
-      const executedMigrations = await queryRunner.query(
+      const executedMigrations = (await queryRunner.query(
         'SELECT * FROM migrations ORDER BY timestamp DESC',
-      );
+      )) as Array<Record<string, unknown>>;
       console.log(`Found ${executedMigrations.length} executed migrations`);
     }
 
@@ -49,4 +49,4 @@ async function runMigrations() {
   }
 }
 
-runMigrations();
+void runMigrations();

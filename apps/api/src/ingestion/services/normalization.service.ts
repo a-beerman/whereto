@@ -20,7 +20,17 @@ export class NormalizationService {
     const location = createCoordinates(lat, lng);
 
     // Normalize opening hours
-    const hours = this.normalizeHours(googlePlace.opening_hours);
+    const hours = this.normalizeHours(
+      googlePlace.opening_hours as
+        | {
+            weekday_text?: string[];
+            periods?: Array<{
+              open?: { day: number; time: string };
+              close?: { day: number; time: string };
+            }>;
+          }
+        | undefined,
+    );
 
     // Extract photo references
     const photoRefs = googlePlace.photos?.map((p) => p.photo_reference) || [];
@@ -40,7 +50,7 @@ export class NormalizationService {
           ? googlePlace.user_ratings_total
           : undefined,
       photoRefs,
-      hours,
+      hours: hours ?? undefined,
       phone: googlePlace.phone,
       website: googlePlace.website,
       socialMedia: googlePlace.socialMedia,
@@ -51,15 +61,37 @@ export class NormalizationService {
   /**
    * Normalize Google Places opening hours to our format
    */
-  private normalizeHours(openingHours?: { weekday_text?: string[]; periods?: any[] }): any {
+  private normalizeHours(openingHours?: {
+    weekday_text?: string[];
+    periods?: Array<{
+      open?: { day: number; time: string };
+      close?: { day: number; time: string };
+    }>;
+  }): {
+    periods?: Array<{ open: { day: number; time: string }; close?: { day: number; time: string } }>;
+    weekday_text?: string[];
+  } | null {
     if (!openingHours) {
       return null;
     }
 
     // Use periods if available (more structured)
+    // Filter out periods without 'open' to match venue entity type
     if (openingHours.periods) {
+      const validPeriods = openingHours.periods
+        .filter(
+          (
+            p,
+          ): p is { open: { day: number; time: string }; close?: { day: number; time: string } } =>
+            p.open !== undefined,
+        )
+        .map((p) => ({
+          open: p.open,
+          close: p.close,
+        }));
+
       return {
-        periods: openingHours.periods,
+        periods: validPeriods.length > 0 ? validPeriods : undefined,
         weekday_text: openingHours.weekday_text,
       };
     }
@@ -78,7 +110,8 @@ export class NormalizationService {
    * Calculate hash of normalized data for change detection
    */
   calculateHash(venue: Partial<Venue>): string {
-    const crypto = require('crypto');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const crypto = require('crypto') as typeof import('crypto');
     const data = JSON.stringify({
       name: venue.name,
       address: venue.address,

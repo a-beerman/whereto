@@ -1,11 +1,22 @@
 import { Context, Telegraf } from 'telegraf';
 import { ApiClientService } from '../services/api-client.service';
 import { StateService, PlanCreationContext, PollContext } from '../services/state.service';
+import { HeroService } from '../services/hero.service';
+import { ScheduledResultsService } from '../services/scheduled-results.service';
+import {
+  BotEventType,
+  PlanCreateProperties,
+  VoteProperties,
+  createEvent,
+  logEvent,
+} from '@whereto/shared';
 
 export class PlanHandler {
   constructor(
     private readonly apiClient: ApiClientService,
     private readonly stateService: StateService,
+    private readonly heroService: HeroService,
+    private readonly scheduledResults: ScheduledResultsService,
   ) {}
 
   /**
@@ -365,6 +376,19 @@ export class PlanHandler {
 
       const plan = planResponse.data;
 
+      // Log plan creation
+      logEvent(
+        createEvent(BotEventType.BOT_PLAN_CREATE_COMPLETE, userId, {
+          planId: plan.id,
+          chatId: planContext.sourceGroupId.toString(),
+          format: planContext.format,
+          budget: planContext.budget,
+          area: planContext.area,
+          date: planContext.date,
+          time: planContext.time,
+        } as PlanCreateProperties),
+      );
+
       // Format date for display
       const dateDisplay = this.formatDateDisplay(planContext.date);
 
@@ -452,9 +476,25 @@ export class PlanHandler {
       const pollVenues = venues.slice(0, 5);
 
       if (pollVenues.length > 0) {
-        // Send announcement/summary first
-        const announcement = announcementParts.join('\n');
-        await bot.telegram.sendMessage(groupChatId, announcement);
+        // Send hero message with image FIRST (Message 1)
+        const heroMessage = this.heroService.buildHeroMessage(
+          plan.id,
+          planContext.format,
+          true, // fairness mode = neutral hero for groups
+          process.env.MINIAPP_URL,
+        );
+
+        try {
+          await bot.telegram.sendPhoto(groupChatId, heroMessage.photo, {
+            caption: heroMessage.caption,
+            reply_markup: heroMessage.replyMarkup,
+          });
+        } catch (photoError) {
+          console.error('Error sending hero photo, falling back to text:', photoError);
+          // Fallback to text announcement if photo fails
+          const announcement = announcementParts.join('\n');
+          await bot.telegram.sendMessage(groupChatId, announcement);
+        }
 
         // Create poll options
         const pollOptions = pollVenues.map((v, i) => {
@@ -478,6 +518,11 @@ export class PlanHandler {
           groupChatId: groupChatId,
           creatorId: userId,
         });
+
+        // Schedule auto-publish results if deadline exists
+        if (plan.votingEndsAt) {
+          this.scheduledResults.scheduleResults(plan.id, groupChatId, new Date(plan.votingEndsAt));
+        }
 
         // Send buttons after poll
         await bot.telegram.sendMessage(groupChatId, 'Голосуйте в опросе выше 👆', {
@@ -1134,6 +1179,16 @@ export class PlanHandler {
       try {
         await this.apiClient.castVote(planId, userId, venueId);
         console.log(`✅ Vote recorded: user=${userId}, venue=${venueId}, plan=${planId}`);
+
+        // Log vote
+        logEvent(
+          createEvent(BotEventType.BOT_PLAN_VOTE, userId, {
+            planId,
+            venueId,
+            userId,
+            source: 'poll',
+          } as VoteProperties),
+        );
       } catch (voteError: unknown) {
         const axiosError = voteError as { response?: { status?: number } };
         // If 403 (Forbidden), user might not be a participant yet
